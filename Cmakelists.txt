@@ -43,12 +43,21 @@ project(godot-cpp-template
     LANGUAGES CXX
 )
 
+# Add outer-libs directory to include paths
+file(GLOB_RECURSE OUTER_LIBS_SOURCES 
+    "${PROJECT_SOURCE_DIR}/outer-libs/**/*.cpp"
+    "${PROJECT_SOURCE_DIR}/outer-libs/**/*.c")
+file(GLOB_RECURSE OUTER_LIBS_HEADERS
+    "${PROJECT_SOURCE_DIR}/outer-libs/**/*.hpp"
+    "${PROJECT_SOURCE_DIR}/outer-libs/**/*.h")
+
 add_library(${LIBNAME} SHARED)
 
 target_sources(${LIBNAME}
     PRIVATE
     src/register_types.cpp
     src/register_types.h
+    ${OUTER_LIBS_SOURCES}
 )
 
 # Fetch a list of the xml files to use for documentation and add to our target
@@ -62,6 +71,9 @@ if(DOC_XML)
 endif()
 
 target_link_libraries(${LIBNAME} PRIVATE godot-cpp)
+
+# Add outer-libs include directories
+target_include_directories(${LIBNAME} PRIVATE "${PROJECT_SOURCE_DIR}/outer-libs")
 
 set_target_properties(${LIBNAME}
     PROPERTIES

@@ -79,17 +79,15 @@ public:
      * @param aggr_ratio_abs # of overlapping points causing aggregation.
      * @param aggr_ratio_rel % of overlapping area causing aggregation.
      * @param num_cycles Number of times system will be restarted.
-     * @exception	invalid_argument Exception is thrown if map side length
-     *           	is not a power of two and greater than three.
      */
     lithosphere(long seed,
                 uint32_t width, uint32_t height,
                 float sea_level,
                 uint32_t _erosion_period, float _folding_ratio,
                 uint32_t aggr_ratio_abs, float aggr_ratio_rel,
-                uint32_t num_cycles, uint32_t _max_plates) noexcept(false);
+                uint32_t num_cycles, uint32_t _max_plates);
 
-    ~lithosphere() noexcept; ///< Standard destructor.
+    ~lithosphere(); ///< Standard destructor.
 
     /**
      * Split the current topography into given number of (rigid) plates.
@@ -100,19 +98,19 @@ public:
      */
     void createPlates();
 
-    uint32_t getCycleCount() const noexcept {
+    uint32_t getCycleCount() const {
         return cycle_count;
     }
-    uint32_t getIterationCount() const noexcept {
+    uint32_t getIterationCount() const {
         return iter_count;
     }
-    const WorldDimension& getWorldDimension() const noexcept {
+    const WorldDimension& getWorldDimension() const {
         return _worldDimension;
     }
-    uint32_t getPlateCount() const noexcept; ///< Return number of plates.
-    const uint32_t* getAgeMap() const noexcept; ///< Return surface age map.
-    float* getTopography() const noexcept; ///< Return height map.
-    uint32_t* getPlatesMap() const noexcept; ///< Return a map of the plates owning eaach point
+    uint32_t getPlateCount() const; ///< Return number of plates.
+    const uint32_t* getAgeMap() const; ///< Return surface age map.
+    float* getTopography() const; ///< Return height map.
+    uint32_t* getPlatesMap() const; ///< Return a map of the plates owning eaach point
     void update(); ///< Simulate one step of plate tectonics.
     uint32_t getWidth() const;
     uint32_t getHeight() const;
@@ -154,7 +152,7 @@ private:
     {
     public:
         plateCollision(uint32_t _index, uint32_t x, uint32_t y, float z)
-        noexcept : index(_index), wx(x), wy(y), crust(z) {
+         : index(_index), wx(x), wy(y), crust(z) {
             ASSERT(crust >= 0, "Crust must be a positive value");
         }
         uint32_t index; ///< Index of the other plate involved in the event.

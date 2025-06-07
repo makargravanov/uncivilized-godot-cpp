@@ -65,16 +65,16 @@ public:
     float velocityOnX(float length) const;
     float velocityOnY(float length) const;
     float dot(float dx_, float dy_) const;
-    float momentum(const Mass& mass) const throw();
+    float momentum(const Mass& mass) const;
     float getVelocity() const {
         return velocity;
     };
     /// @Deprecated, use velocityUnitVector instead
-    float velX() const throw() {
+    float velX() const {
         return vx;
     }
     /// @Deprecated, use velocityUnitVector instead
-    float velY() const throw() {
+    float velY() const {
         return vy;
     }
     void collide(const IMass& thisMass, IPlate& p, uint32_t wx, uint32_t wy, float coll_mass);

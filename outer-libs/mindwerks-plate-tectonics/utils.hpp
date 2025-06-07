@@ -34,7 +34,7 @@ typedef INT32 int32_t;
 #endif
 
 #ifndef UINT32_C
-#define UINT32_C(val) val##ui32
+#define UINT32_C(val) val##U
 #endif
 
 namespace Platec {

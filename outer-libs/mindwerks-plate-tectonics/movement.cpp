@@ -120,7 +120,7 @@ float Movement::relativeUnitVelocityOnY(float otherVy) const {
     return vy - otherVy;
 }
 
-float Movement::momentum(const Mass& mass) const throw() {
+float Movement::momentum(const Mass& mass) const {
     return mass.getMass() * velocity;
 }
 

@@ -640,7 +640,7 @@ ContinentId plate::selectCollisionSegment(uint32_t coll_x, uint32_t coll_y)
 /// Private methods ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-uint32_t plate::createSegment(uint32_t x, uint32_t y) throw()
+uint32_t plate::createSegment(uint32_t x, uint32_t y)
 {
     return _mySegmentCreator->createSegment(x, y);
 }

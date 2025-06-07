@@ -92,7 +92,8 @@ lithosphere::lithosphere(long seed, uint32_t width, uint32_t height, float sea_l
     _steps(0)
 {
     if (width < 5 || height < 5) {
-        throw runtime_error("Width and height should be >=5");
+        width = width < 5 ? 5 : width;
+        height = height < 5 ? 5 : height;
     }
 
     WorldDimension tmpDim = WorldDimension(width+1, height+1);
@@ -158,7 +159,7 @@ lithosphere::lithosphere(long seed, uint32_t width, uint32_t height, float sea_l
     createPlates();
 }
 
-lithosphere::~lithosphere() throw()
+lithosphere::~lithosphere()
 {
     clearPlates();
     delete[] plates;
@@ -258,95 +259,88 @@ void lithosphere::growPlates()
 
 void lithosphere::createPlates()
 {
-    try {
-        const uint32_t map_area = _worldDimension.getArea();
-        num_plates = max_plates;
+    const uint32_t map_area = _worldDimension.getArea();
+    num_plates = max_plates;
 
-        // Initialize "Free plate center position" lookup table.
-        // This way two plate centers will never be identical.
-        for (uint32_t i = 0; i < map_area; ++i)
-            imap[i] = i;
+    // Initialize "Free plate center position" lookup table.
+    // This way two plate centers will never be identical.
+    for (uint32_t i = 0; i < map_area; ++i)
+        imap[i] = i;
 
-        // Select N plate centers from the global map.
+    // Select N plate centers from the global map.
 
-        for (uint32_t i = 0; i < num_plates; ++i)
-        {
-            plateArea& area = plate_areas[i];
+    for (uint32_t i = 0; i < num_plates; ++i)
+    {
+        plateArea& area = plate_areas[i];
 
-            // Randomly select an unused plate origin.
-            const uint32_t p = imap[(uint32_t)_randsource.next() % (map_area - i)];
-            const uint32_t y = _worldDimension.yFromIndex(p);
-            const uint32_t x = _worldDimension.xFromIndex(p);
+        // Randomly select an unused plate origin.
+        const uint32_t p = imap[(uint32_t)_randsource.next() % (map_area - i)];
+        const uint32_t y = _worldDimension.yFromIndex(p);
+        const uint32_t x = _worldDimension.xFromIndex(p);
 
-            area.lft = area.rgt = x; // Save origin...
-            area.top = area.btm = y;
-            area.wdt = area.hgt = 1;
+        area.lft = area.rgt = x; // Save origin...
+        area.top = area.btm = y;
+        area.wdt = area.hgt = 1;
 
-            area.border.clear();
-            area.border.push_back(p); // ...and mark it as border.
+        area.border.clear();
+        area.border.push_back(p); // ...and mark it as border.
 
-            // Overwrite used entry with last unused entry in array.
-            imap[p] = imap[map_area - i - 1];
-        }
-
-        imap.set_all(0xFFFFFFFF);
-
-        growPlates();
-
-        // check all the points of the map are owned
-        for (int i=0; i < map_area; i++) {
-            ASSERT(imap[i]<num_plates, "A point was not assigned to any plate");
-        }
-
-        // Extract and create plates from initial terrain.
-        for (uint32_t i = 0; i < num_plates; ++i) {
-            plateArea& area = plate_areas[i];
-
-            area.wdt = _worldDimension.xCap(area.wdt);
-            area.hgt = _worldDimension.yCap(area.hgt);
-
-            const uint32_t x0 = area.lft;
-            const uint32_t x1 = 1 + x0 + area.wdt;
-            const uint32_t y0 = area.top;
-            const uint32_t y1 = 1 + y0 + area.hgt;
-            const uint32_t width = x1 - x0;
-            const uint32_t height = y1 - y0;
-            float* pmap = new float[width * height];
-
-            // Copy plate's height data from global map into local map.
-            for (uint32_t y = y0, j = 0; y < y1; ++y) {
-                for (uint32_t x = x0; x < x1; ++x, ++j) {
-                    uint32_t k = _worldDimension.normalizedIndexOf(x, y);
-                    pmap[j] = hmap[k] * (imap[k] == i);
-                }
-            }
-            // Create plate.
-            // MK: The pmap array becomes owned by map, do not delete it
-            plates[i] = new plate(_randsource.next(), pmap, width, height, x0, y0, i, _worldDimension);
-        }
-
-        iter_count = num_plates + MAX_BUOYANCY_AGE;
-        peak_Ek = 0;
-        last_coll_count = 0;
-
-    } catch (const exception& e) {
-        string msg = "Problem during createPlates: ";
-        msg = msg + e.what();
-        throw runtime_error(msg.c_str());
+        // Overwrite used entry with last unused entry in array.
+        imap[p] = imap[map_area - i - 1];
     }
+
+    imap.set_all(0xFFFFFFFF);
+
+    growPlates();
+
+    // check all the points of the map are owned
+    for (int i=0; i < map_area; i++) {
+        ASSERT(imap[i]<num_plates, "A point was not assigned to any plate");
+    }
+
+    // Extract and create plates from initial terrain.
+    for (uint32_t i = 0; i < num_plates; ++i) {
+        plateArea& area = plate_areas[i];
+
+        area.wdt = _worldDimension.xCap(area.wdt);
+        area.hgt = _worldDimension.yCap(area.hgt);
+
+        const uint32_t x0 = area.lft;
+        const uint32_t x1 = 1 + x0 + area.wdt;
+        const uint32_t y0 = area.top;
+        const uint32_t y1 = 1 + y0 + area.hgt;
+        const uint32_t width = x1 - x0;
+        const uint32_t height = y1 - y0;
+        float* pmap = new float[width * height];
+
+        // Copy plate's height data from global map into local map.
+        for (uint32_t y = y0, j = 0; y < y1; ++y) {
+            for (uint32_t x = x0; x < x1; ++x, ++j) {
+                uint32_t k = _worldDimension.normalizedIndexOf(x, y);
+                pmap[j] = hmap[k] * (imap[k] == i);
+            }
+        }
+        // Create plate.
+        // MK: The pmap array becomes owned by map, do not delete it
+        plates[i] = new plate(_randsource.next(), pmap, width, height, x0, y0, i, _worldDimension);
+    }
+
+    iter_count = num_plates + MAX_BUOYANCY_AGE;
+    peak_Ek = 0;
+    last_coll_count = 0;
 }
 
-uint32_t lithosphere::getPlateCount() const throw()
+uint32_t lithosphere::getPlateCount() const
 {
     return num_plates;
 }
 
-const uint32_t* lithosphere::getAgeMap() const throw()
+const uint32_t* lithosphere::getAgeMap() const
 {
     return amap.raw_data();
 }
 
-float* lithosphere::getTopography() const throw()
+float* lithosphere::getTopography() const
 {
     return hmap.raw_data();
 }
@@ -617,7 +611,6 @@ void lithosphere::removeEmptyPlates()
 
 void lithosphere::update()
 {
-    try {
         _steps++;
         float totalVelocity = 0;
         float systemKineticEnergy = 0;
@@ -722,8 +715,6 @@ void lithosphere::update()
 
         removeEmptyPlates();
 
-        //delete[] indexFound;
-
         // Add some "virginity buoyancy" to all pixels for a visual boost! :)
         for (uint32_t i = 0; i < (BUOYANCY_BONUS_X > 0) * map_area; ++i)
         {
@@ -739,17 +730,12 @@ void lithosphere::update()
         }
 
         ++iter_count;
-    } catch (const exception& e) {
-        string msg = "Problem during update: ";
-        msg = msg + e.what();
-        cerr << msg << endl;
-        throw runtime_error(msg.c_str());
-    }
+
 }
 
 void lithosphere::restart()
 {
-    try {
+
 
         const uint32_t map_area = _worldDimension.getArea();
 
@@ -836,11 +822,7 @@ void lithosphere::restart()
             hmap[i] += (hmap[i] < CONTINENTAL_BASE) * BUOYANCY_BONUS_X *
                        OCEANIC_BASE * crust_age * MULINV_MAX_BUOYANCY_AGE;
         }
-    } catch (const exception& e) {
-        std::string msg = "Problem during restart: ";
-        msg = msg + e.what();
-        throw runtime_error(msg.c_str());
-    }
+
 }
 
 uint32_t lithosphere::getWidth() const
@@ -853,7 +835,7 @@ uint32_t lithosphere::getHeight() const
     return _worldDimension.getHeight();
 }
 
-uint32_t* lithosphere::getPlatesMap() const throw()
+uint32_t* lithosphere::getPlatesMap() const
 {
     return imap.raw_data();
 }

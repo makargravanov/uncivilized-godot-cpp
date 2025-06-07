@@ -204,22 +204,22 @@ public:
     /// @param  t   Time of creation of new crust.
     void setCrust(uint32_t x, uint32_t y, float z, uint32_t t);
 
-    float getMass() const throw() {
+    float getMass() const {
         return _mass.getMass();
     }
-    float getMomentum() const throw() {
+    float getMomentum() const {
         return _movement.momentum(_mass);
     }
-    uint32_t getHeight() const throw() {
+    uint32_t getHeight() const {
         return _bounds->height();
     }
-    uint32_t  getLeftAsUint() const throw() {
+    uint32_t  getLeftAsUint() const {
         return _bounds->leftAsUint();
     }
-    uint32_t  getTopAsUint() const throw() {
+    uint32_t  getTopAsUint() const {
         return _bounds->topAsUint();
     }
-    float getVelocity() const throw() {
+    float getVelocity() const {
         return _movement.getVelocity();
     }
 
@@ -228,18 +228,18 @@ public:
     }
 
     /// @Deprecated, use velocityUnitVector instead
-    float getVelX() const throw() {
+    float getVelX() const {
         return _movement.velX();
     }
     /// @Deprecated, use velocityUnitVector instead
-    float getVelY() const throw() {
+    float getVelY() const {
         return _movement.velY();
     }
 
-    uint32_t getWidth() const throw() {
+    uint32_t getWidth() const {
         return _bounds->width();
     }
-    bool   isEmpty() const throw() {
+    bool   isEmpty() const {
         return _mass.null();
     }
     float getCx() const {
@@ -290,7 +290,7 @@ private:
     const ISegmentData& getContinentAt(int x, int y) const;
     void findRiverSources(float lower_bound, vector<uint32_t>* sources);
     void flowRivers(float lower_bound, vector<uint32_t>* sources, HeightMap& tmp);
-    uint32_t createSegment(uint32_t x, uint32_t y) throw();
+    uint32_t createSegment(uint32_t x, uint32_t y);
 
     const WorldDimension _worldDimension;
     SimpleRandom _randsource;
