@@ -6,7 +6,7 @@ from methods import print_error
 
 
 libname = "EXTENSION-NAME"
-projectdir = "demo"
+projectdir = "script"
 
 localEnv = Environment(tools=["default"], PLATFORM="")
 
