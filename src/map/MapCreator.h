@@ -12,8 +12,36 @@
 struct MapResult {
     std::unique_ptr<f32[]> heights;
     std::unique_ptr<u32[]> ageMap;
+    std::unique_ptr<u32[]> platesMap;
     u32 width  = 0;
     u32 height = 0;
+
+    MapResult(std::unique_ptr<f32[]> heights, std::unique_ptr<u32[]> ageMap,std::unique_ptr<u32[]> platesMap, u32 width, u32 height)
+        : heights(std::move(heights)),
+          ageMap(std::move(ageMap)),
+          platesMap(std::move(platesMap)),
+          width(width),
+          height(height) {}
+
+
+    MapResult(const MapResult& other) = delete;
+    MapResult();
+    MapResult& operator=(const MapResult& other) = delete;
+
+    MapResult(MapResult&& other) noexcept
+        : heights(std::move(other.heights)), ageMap(std::move(other.ageMap)), platesMap(std::move(other.platesMap)),
+          width(other.width), height(other.height) {}
+    MapResult& operator=(MapResult&& other) noexcept {
+        if (this == &other) {
+            return *this;
+        }
+        heights   = std::move(other.heights);
+        ageMap    = std::move(other.ageMap);
+        platesMap = std::move(other.platesMap);
+        width     = other.width;
+        height    = other.height;
+        return *this;
+    }
 };
 
 struct MapArgs {
@@ -31,6 +59,8 @@ struct MapArgs {
     u32 numPlates  = 10;
 };
 
+using ProgressCallback = std::function<void(f32 progress, u8 cycle)>;
+
 class MapCreator {
 public:
     /**
@@ -41,6 +71,7 @@ public:
      * Основные параметры:
      * -------------------
      * @param args
+     * @param progressCallback
      * @param seed          Случайное зерно генерации. Одинаковый seed даёт идентичные результаты.
      * @param width         Ширина карты в пикселях.
      * @param height        Высота карты в пикселях.
@@ -76,7 +107,7 @@ public:
      * 5. Возвращает std::future
      * ===========================================================================
      */
-    static fun createAsync(const MapArgs& args) noexcept -> std::future<MapResult>;
+    static fun createAsync(const MapArgs& args, ProgressCallback progressCallback) noexcept -> std::future<MapResult>;
 };
 
 

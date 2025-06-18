@@ -76,13 +76,13 @@ const uint32_t* platec_api_get_agemap(void* pointer) {
 }
 
 float* platec_api_get_heightmap(void* pointer) {
-  lithosphere* litho = (lithosphere*)pointer;
+  lithosphere* litho = static_cast<lithosphere*>(pointer);
   float* res = litho->getTopography();
   return res;
 }
 
 uint32_t* platec_api_get_platesmap(void* pointer) {
-  lithosphere* litho = (lithosphere*)pointer;
+  lithosphere* litho = static_cast<lithosphere*>(pointer);
   uint32_t* res = litho->getPlatesMap();
   return res;
 }
@@ -101,6 +101,16 @@ uint32_t platec_api_is_finished(void* pointer) {
   } else {
     return 0;
   }
+}
+
+uint32_t platec_api_get_iter_count(void* pointer) {
+    lithosphere* litho = (lithosphere*)pointer;
+    return litho->getIterationCount();
+}
+
+uint32_t platec_api_get_cycle_count(void* pointer) {
+    lithosphere* litho = (lithosphere*)pointer;
+    return litho->getCycleCount();
 }
 
 void platec_api_step(void* pointer) {

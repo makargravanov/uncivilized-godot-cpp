@@ -39,6 +39,9 @@ uint32_t* platec_api_get_platesmap(void*);
 uint32_t  platec_api_is_finished(void*);
 void    platec_api_step(void*);
 
+uint32_t platec_api_get_iter_count(void* pointer);
+uint32_t platec_api_get_cycle_count(void* pointer);
+
 float platec_api_velocity_unity_vector_x(void*, uint32_t plate_index);
 float platec_api_velocity_unity_vector_y(void*, uint32_t plate_index);
 
