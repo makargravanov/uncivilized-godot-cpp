@@ -51,8 +51,6 @@ file(GLOB_RECURSE OUTER_LIBS_HEADERS
     "${PROJECT_SOURCE_DIR}/outer-libs/**/*.hpp"
     "${PROJECT_SOURCE_DIR}/outer-libs/**/*.h")
 
-add_library(${LIBNAME} SHARED)
-
 target_sources(${LIBNAME}
     PRIVATE
     src/register_types.cpp

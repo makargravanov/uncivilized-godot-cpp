@@ -6,6 +6,5 @@ void ExampleClass::_bind_methods() {
 }
 
 void ExampleClass::print_type(const Variant &p_variant) const {
-    platec_api_get_agemap(1);
 	print_line(vformat("Type: %d", p_variant.get_type()));
 }
