@@ -4,24 +4,22 @@
 
 #include "Aligner.h"
 
-#include "MapCreator.h"
+#include "PlatecWrapper.h"
 #include <algorithm>
 #include <vector>
 
-fun Aligner::applyAlign(MapResult&& map) {
+MapResult Aligner::applyAlign(MapResult&& m) {
 
-    return std::async(std::launch::async, [m = std::move(map)] mutable {
-        val heights       = std::move(m.heights);
-        val ageMap    = std::move(m.ageMap);
-        val platesMap = std::move(m.platesMap);
+        auto const heights       = std::move(m.heights);
+        auto const ageMap    = std::move(m.ageMap);
+        auto const platesMap = std::move(m.platesMap);
 
-        val width  = m.width;
-        val height = m.height;
+        auto const width  = m.width;
+        auto const height = m.height;
 
-
-        var newHeights   = std::make_unique<f32[]>(width * height);
-        var newAgeMap    = std::make_unique<u32[]>(width * height);
-        var newPlatesMap = std::make_unique<u32[]>(width * height);
+        auto newHeights   = std::make_unique<f32[]>(width * height);
+        auto newAgeMap    = std::make_unique<u32[]>(width * height);
+        auto newPlatesMap = std::make_unique<u32[]>(width * height);
 
         std::vector rowSums(height, 0.0f);
         for (u32 y = 0; y < height; y++) {
@@ -41,11 +39,11 @@ fun Aligner::applyAlign(MapResult&& map) {
         const u32 xWithMinSum = std::distance(colSums.begin(),
                                         std::min_element(colSums.begin(), colSums.end()));
 
-        val xOffset = xWithMinSum;
-        val yOffset = yWithMinSum;
+        auto const xOffset = xWithMinSum;
+        auto const yOffset = yWithMinSum;
 
-        var newX = 0;
-        var newY = 0;
+        auto newX = 0;
+        auto newY = 0;
 
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
@@ -58,12 +56,11 @@ fun Aligner::applyAlign(MapResult&& map) {
             }
         }
 
-        return MapResult{
+        return MapResult(
             std::move(newHeights),
             std::move(newAgeMap),
             std::move(newPlatesMap),
             width,
             height
-        };
-    });
+        );
 }

@@ -1,0 +1,41 @@
+[gd_scene load_steps=4 format=3 uid="uid://h3iog2tmqvdh"]
+
+[ext_resource type="FontFile" uid="uid://bh1f086ip3nr6" path="res://assets/fonts/OldStandardTT-Regular.ttf" id="1_gm0ea"]
+[ext_resource type="Script" uid="uid://cpbr35hy3re7w" path="res://view/new_game.gd" id="2_yils4"]
+
+[sub_resource type="Theme" id="Theme_yils4"]
+default_font = ExtResource("1_gm0ea")
+
+[node name="NewGame" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = SubResource("Theme_yils4")
+script = ExtResource("2_yils4")
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 0
+offset_left = 422.0
+offset_top = 205.0
+offset_right = 661.0
+offset_bottom = 261.0
+text = "Тыц нахуй бля"
+
+[node name="Button2" type="Button" parent="."]
+layout_mode = 0
+offset_left = 417.0
+offset_top = 277.0
+offset_right = 656.0
+offset_bottom = 333.0
+text = "2"
+
+[node name="Button3" type="Button" parent="."]
+layout_mode = 0
+offset_left = 408.0
+offset_top = 353.0
+offset_right = 647.0
+offset_bottom = 409.0
+text = "3"

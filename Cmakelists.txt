@@ -44,18 +44,18 @@ project(godot-cpp-template
 )
 
 # Add outer-libs directory to include paths
-file(GLOB_RECURSE OUTER_LIBS_SOURCES 
-    "${PROJECT_SOURCE_DIR}/outer-libs/**/*.cpp"
-    "${PROJECT_SOURCE_DIR}/outer-libs/**/*.c")
-file(GLOB_RECURSE OUTER_LIBS_HEADERS
-    "${PROJECT_SOURCE_DIR}/outer-libs/**/*.hpp"
-    "${PROJECT_SOURCE_DIR}/outer-libs/**/*.h")
+#file(GLOB_RECURSE PLATEC_SOURCES
+#    "${PROJECT_SOURCE_DIR}/outer-libs/mindwerks-plate-tectonics/*.cpp"
+#    "${PROJECT_SOURCE_DIR}/outer-libs/mindwerks-plate-tectonics/*.c")
+#file(GLOB_RECURSE PLATEC_HEADERS
+#    "${PROJECT_SOURCE_DIR}/outer-libs/mindwerks-plate-tectonics/*.hpp"
+#    "${PROJECT_SOURCE_DIR}/outer-libs/mindwerks-plate-tectonics/*.h")
 
 target_sources(${LIBNAME}
     PRIVATE
     src/register_types.cpp
     src/register_types.h
-    ${OUTER_LIBS_SOURCES}
+#    ${PLATEC_SOURCES}
 )
 
 # Fetch a list of the xml files to use for documentation and add to our target

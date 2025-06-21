@@ -26,7 +26,7 @@
 #include <cstdlib>   // rand
 #include <vector>
 #include <stdexcept> // std::invalid_argument
-#include <assert.h>
+#include <cassert>
 
 #include "plate.hpp"
 #include "heightmap.hpp"

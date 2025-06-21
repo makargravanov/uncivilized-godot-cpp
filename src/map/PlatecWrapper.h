@@ -25,7 +25,11 @@ struct MapResult {
 
 
     MapResult(const MapResult& other) = delete;
-    MapResult();
+    MapResult() {
+        heights = nullptr;
+        ageMap = nullptr;
+        platesMap = nullptr;
+    };
     MapResult& operator=(const MapResult& other) = delete;
 
     MapResult(MapResult&& other) noexcept
@@ -45,7 +49,7 @@ struct MapResult {
 };
 
 struct MapArgs {
-    i64 seed     = 3;
+    u64 seed     = 3;
     u32 width    = 500;
     u32 height   = 500;
     f32 seaLevel = 0.65;
@@ -55,13 +59,13 @@ struct MapArgs {
     u32 aggrOverlapAbs = 1000000;
     f32 aggrOverlapRel = 0.33;
 
-    u32 cycleCount = 2;
-    u32 numPlates  = 10;
+    u8 cycleCount = 2;
+    u8 numPlates  = 10;
 };
 
 using ProgressCallback = std::function<void(f32 progress, u8 cycle)>;
 
-class MapCreator {
+class PlatecWrapper {
 public:
     /**
      * ==================================================================================
@@ -107,7 +111,7 @@ public:
      * 5. Возвращает std::future
      * ===========================================================================
      */
-    static fun createAsync(const MapArgs& args, ProgressCallback progressCallback) noexcept -> std::future<MapResult>;
+    static MapResult createHeights(const MapArgs& args, const ProgressCallback& progressCallback) noexcept;
 };
 
 

@@ -1,6 +1,18 @@
-[gd_scene format=3 uid="uid://vjfihp03ytjv"]
+[gd_scene load_steps=6 format=3 uid="uid://vjfihp03ytjv"]
 
-[node name="Control" type="Control"]
+[ext_resource type="Script" uid="uid://cxojyd4uv8ms4" path="res://MainMenu.gd" id="1_glv2v"]
+[ext_resource type="FontFile" uid="uid://bh1f086ip3nr6" path="res://assets/fonts/OldStandardTT-Regular.ttf" id="1_uu6xs"]
+
+[sub_resource type="Theme" id="Theme_rxg2q"]
+default_font = ExtResource("1_uu6xs")
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_uu6xs"]
+load_path = "res://.godot/imported/main_menu_background.png-03f3769e3dacb930d0265b5e39480585.ctex"
+
+[sub_resource type="LabelSettings" id="LabelSettings_glv2v"]
+font_size = 81
+
+[node name="Main" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -9,10 +21,70 @@ offset_left = -3.0
 offset_right = -3.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = SubResource("Theme_rxg2q")
+script = ExtResource("1_glv2v")
 
-[node name="ColorRect" type="ColorRect" parent="."]
-layout_mode = 0
-offset_left = 311.85
-offset_top = 180.314
-offset_right = 351.85
-offset_bottom = 220.314
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("CompressedTexture2D_uu6xs")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ButtonContainer" type="VBoxContainer" parent="."]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.062
+anchor_top = 0.454
+anchor_right = 0.062
+anchor_bottom = 0.454
+offset_top = -235.0
+offset_right = 388.0
+offset_bottom = 235.0
+theme_override_constants/separation = 20
+
+[node name="Label" type="Label" parent="ButtonContainer"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+text = "Uncivilized"
+label_settings = SubResource("LabelSettings_glv2v")
+
+[node name="NewGame" type="Button" parent="ButtonContainer"]
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 31
+text = "Новая игра"
+
+[node name="Resume" type="Button" parent="ButtonContainer"]
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 31
+text = "Продолжить игру"
+
+[node name="LoadGame" type="Button" parent="ButtonContainer"]
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 31
+text = "Загрузить игру"
+
+[node name="Settings" type="Button" parent="ButtonContainer"]
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 31
+text = "Настройки"
+
+[node name="Exit" type="Button" parent="ButtonContainer"]
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 31
+text = "Выход"

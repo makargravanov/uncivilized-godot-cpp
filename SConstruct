@@ -39,8 +39,10 @@ env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
 
 env.Append(CPPPATH=["src/"])
 sources = Glob("src/*.cpp")
+map_dir = Glob("src/map/*.cpp")
 outer_libs_sources = Glob("outer-libs/**/*.cpp")
 sources.extend(outer_libs_sources)
+sources.extend(map_dir)
 
 env.Append(CXXFLAGS=["-fext-numeric-literals"])
 
