@@ -5,6 +5,7 @@
 #include "MapCreator.h"
 
 #include "map/Aligner.h"
+#include "../outer-libs/open-simplex-noise/OpenSimplexNoise.h"
 
 void MapCreator::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_heightmap_callback", "callback"), &MapCreator::set_heightmap_callback);
