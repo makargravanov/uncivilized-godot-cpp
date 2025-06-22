@@ -18,7 +18,8 @@ demo/bin/windows/*
 !demo/bin/windows/.gitkeep
 !demo/bin/*.gdextension
 
-bin/**/.gitkeep
+!bin/**/.gitkeep
+bin/*
 
 script/bin/*
 !script/bin/android
