@@ -10,6 +10,7 @@ struct MapResult;
 class Aligner {
 public:
     static MapResult applyAlign(MapResult&& map) noexcept;
+    static MapResult applyBorders(MapResult&& map) noexcept;
 };
 
 

@@ -19,9 +19,11 @@ void MapCreator::create() {
     }
 }
 void MapCreator::createInternal() {
+    //TODO: добавить callbacks для переходов между стадиями
     this->futureResult = std::async(std::launch::async, [this] {
         auto heights = PlatecWrapper::createHeights(MapArgs(), [this](f32 a, u8 b) { callbackHeightMap.call_deferred(a, b); });
-        auto aligned = Aligner::applyAlign(std::move(heights));
+        auto aligned = Aligner::applyBorders(Aligner::applyAlign(std::move(heights)));
+
         if (callbackFinish.is_valid()) {
             callbackFinish.call_deferred();
         }
