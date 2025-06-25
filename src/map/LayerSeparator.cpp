@@ -4,12 +4,26 @@
 
 #include "LayerSeparator.h"
 
+#include <algorithm>
+#include <cmath>
 #include <queue>
-f32 LayerSeparator::findThreshold(std::unique_ptr<f32[]>& heightMap, f32 landPercentage, const u32 width, const u32 height) {
 
+f32 quantile(std::vector<f32>& data, const f32 landPercentage) {
+    std::sort(data.begin(), data.end());
+    const f32 index    = landPercentage * (data.size() - 1);
+    const f32 lower    = std::floor(index);
+    const f32 fraction = index - lower;
+    return data[lower] + fraction * (data[lower+1] - data[lower]);
+}
 
-    // TODO:
-    return 0;
+f32 LayerSeparator::findThreshold(           // от 0.0 до 1.0
+    const std::unique_ptr<f32[]>& heightMap, const f32 landPercentage, const u32 width, const u32 height) {
+
+    auto vec = std::vector<f32>(width*height);
+    for (int i = 0; i < width*height; ++i) {
+        vec[i] = heightMap[i];
+    }
+    return quantile(vec, landPercentage);
 }
 void LayerSeparator::fillOcean(const std::unique_ptr<f32[]>& heights, std::unique_ptr<bool[]>& ocean,
     const u32 width, const u32 height, const f32 oceanLevel) {
