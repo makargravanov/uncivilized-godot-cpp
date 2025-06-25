@@ -12,16 +12,18 @@
 struct MapResult {
     std::unique_ptr<f32[]> heights;
     std::unique_ptr<u32[]> ageMap;
-    std::unique_ptr<u32[]> platesMap;
+    std::unique_ptr<u16[]> platesMap;
     u32 width  = 0;
     u32 height = 0;
+    f32 oceanLevel = 0;
 
-    MapResult(std::unique_ptr<f32[]> heights, std::unique_ptr<u32[]> ageMap,std::unique_ptr<u32[]> platesMap, u32 width, u32 height)
+    MapResult(std::unique_ptr<f32[]> heights, std::unique_ptr<u32[]> ageMap,std::unique_ptr<u16[]> platesMap, u32 width, u32 height, f32 oceanLevel)
         : heights(std::move(heights)),
           ageMap(std::move(ageMap)),
           platesMap(std::move(platesMap)),
           width(width),
-          height(height) {}
+          height(height),
+          oceanLevel(oceanLevel) {}
 
 
     MapResult(const MapResult& other) = delete;
@@ -34,16 +36,17 @@ struct MapResult {
 
     MapResult(MapResult&& other) noexcept
         : heights(std::move(other.heights)), ageMap(std::move(other.ageMap)), platesMap(std::move(other.platesMap)),
-          width(other.width), height(other.height) {}
+          width(other.width), height(other.height), oceanLevel(other.oceanLevel) {}
     MapResult& operator=(MapResult&& other) noexcept {
         if (this == &other) {
             return *this;
         }
-        heights   = std::move(other.heights);
-        ageMap    = std::move(other.ageMap);
-        platesMap = std::move(other.platesMap);
-        width     = other.width;
-        height    = other.height;
+        heights    = std::move(other.heights);
+        ageMap     = std::move(other.ageMap);
+        platesMap  = std::move(other.platesMap);
+        width      = other.width;
+        height     = other.height;
+        oceanLevel = other.oceanLevel;
         return *this;
     }
 };

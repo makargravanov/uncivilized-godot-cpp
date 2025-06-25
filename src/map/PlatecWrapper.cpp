@@ -51,11 +51,11 @@ MapResult PlatecWrapper::createHeights(const MapArgs& args, const ProgressCallba
 
     auto heightsCopy   = std::make_unique<f32[]>(numElements);
     auto ageMapCopy    = std::make_unique<u32[]>(numElements);
-    auto platesMapCopy = std::make_unique<u32[]>(numElements);
+    auto platesMapCopy = std::make_unique<u16[]>(numElements);
 
     std::memcpy(heightsCopy.get(), heights, numElements * sizeof(f32));
     std::memcpy(ageMapCopy.get(), ageMap, numElements * sizeof(u32));
-    std::memcpy(platesMapCopy.get(), platesMap, numElements * sizeof(u32));
+    std::memcpy(platesMapCopy.get(), platesMap, numElements * sizeof(u16));
 
     platec_api_destroy(api);
     return MapResult(
@@ -63,6 +63,7 @@ MapResult PlatecWrapper::createHeights(const MapArgs& args, const ProgressCallba
         std::move(ageMapCopy),
         std::move(platesMapCopy),
         args.width,
-        args.height
+        args.height,
+        args.seaLevel
     );
 }

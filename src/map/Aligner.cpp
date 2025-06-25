@@ -19,7 +19,7 @@ MapResult Aligner::applyAlign(MapResult&& map) noexcept {
 
     auto newHeights   = std::make_unique<f32[]>(width * height);
     auto newAgeMap    = std::make_unique<u32[]>(width * height);
-    auto newPlatesMap = std::make_unique<u32[]>(width * height);
+    auto newPlatesMap = std::make_unique<u16[]>(width * height);
 
     std::vector rowSums(height, 0.0f);
     for (u32 y = 0; y < height; y++) {
@@ -54,7 +54,14 @@ MapResult Aligner::applyAlign(MapResult&& map) noexcept {
         }
     }
 
-    return MapResult(std::move(newHeights), std::move(newAgeMap), std::move(newPlatesMap), width, height);
+    return MapResult(
+        std::move(newHeights),
+        std::move(newAgeMap),
+        std::move(newPlatesMap),
+        width,
+        height,
+        map.oceanLevel
+    );
 }
 
 MapResult Aligner::applyBorders(MapResult&& map) noexcept {
@@ -72,5 +79,12 @@ MapResult Aligner::applyBorders(MapResult&& map) noexcept {
         }
     }
 
-    return MapResult(std::move(heights), std::move(map.ageMap), std::move(map.platesMap), map.width, map.height);
+    return MapResult(
+        std::move(heights),
+        std::move(map.ageMap),
+        std::move(map.platesMap),
+        map.width,
+        map.height,
+        map.oceanLevel
+    );
 }
