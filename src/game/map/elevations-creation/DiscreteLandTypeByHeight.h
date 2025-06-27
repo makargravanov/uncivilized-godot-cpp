@@ -4,7 +4,7 @@
 
 #ifndef DISCRETEHEIGHTLANDTYPE_H
 #define DISCRETEHEIGHTLANDTYPE_H
-#include "../../../declarations.h"
+#include "../../../util/declarations.h"
 enum DiscreteLandTypeByHeight : u8 {
     OCEAN = 0,
     PLAIN = 1,

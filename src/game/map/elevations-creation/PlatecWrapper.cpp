@@ -12,10 +12,6 @@
 #include "../outer-libs/mindwerks-plate-tectonics/platecapi.hpp"
 #include "godot_cpp/core/print_string.hpp"
 
-std::size_t getThreadIdHash() {
-    return std::hash<std::thread::id>{}(std::this_thread::get_id());
-}
-
 MapResult PlatecWrapper::createHeights(const MapArgs& args, const ProgressCallback& progressCallback = nullptr) noexcept {
 
     void* api = platec_api_create(args.seed, args.width, args.height, args.seaLevel, args.erosionPeriod, args.foldingRatio,
