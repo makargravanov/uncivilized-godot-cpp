@@ -4,6 +4,7 @@
 
 #include "LayerSeparator.h"
 
+#include "DiscreteLandTypeByHeight.h"
 #include <algorithm>
 #include <cmath>
 #include <queue>
@@ -25,11 +26,11 @@ f32 LayerSeparator::findThreshold(           // от 0.0 до 1.0
     }
     return quantile(vec, landPercentage);
 }
-void LayerSeparator::fillOcean(const std::unique_ptr<f32[]>& heights, std::unique_ptr<bool[]>& ocean,
+void LayerSeparator::fillOceanOrPlain(const std::unique_ptr<f32[]>& heights, std::unique_ptr<DiscreteLandTypeByHeight[]>& discrete,
     const u32 width, const u32 height, const f32 oceanLevel) {
 
     for (u32 i = 0; i < width * height; ++i) {
-        ocean[i] = false;
+        discrete[i] = DiscreteLandTypeByHeight::PLAIN;
     }
 
     std::queue<std::pair<u32, u32>> toExpand;
@@ -56,8 +57,8 @@ void LayerSeparator::fillOcean(const std::unique_ptr<f32[]>& heights, std::uniqu
         auto [x, y] = toExpand.front();
         toExpand.pop();
         u32 idx = y * width + x;
-        if (!ocean[idx]) {
-            ocean[idx] = true;
+        if (!discrete[idx]) {
+            discrete[idx] = DiscreteLandTypeByHeight::OCEAN;
             for (i32 dy = -1; dy <= 1; ++dy) {
                 for (i32 dx = -1; dx <= 1; ++dx) {
                     if (dx == 0 && dy == 0) {
@@ -67,7 +68,7 @@ void LayerSeparator::fillOcean(const std::unique_ptr<f32[]>& heights, std::uniqu
                     i32 ny = static_cast<i32>(y) + dy;
                     if (nx >= 0 && nx < static_cast<i32>(width) && ny >= 0 && ny < static_cast<i32>(height)) {
                         u32 nidx = ny * width + nx;
-                        if (!ocean[nidx] && heights[nidx] <= oceanLevel) {
+                        if (!discrete[nidx] && heights[nidx] <= oceanLevel) {
                             toExpand.push({static_cast<u32>(nx), static_cast<u32>(ny)});
                         }
                     }
@@ -79,11 +80,39 @@ void LayerSeparator::fillOcean(const std::unique_ptr<f32[]>& heights, std::uniqu
 
 SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map) noexcept {
     auto heights = std::move(map.heights);
-    auto ocean   = std::make_unique<bool[]>(map.height * map.width);
+    auto discrete   = std::make_unique<DiscreteLandTypeByHeight[]>(map.height * map.width);
 
-    fillOcean(heights, ocean, map.width, map.height, map.oceanLevel);
+    fillOceanOrPlain(heights, discrete, map.width, map.height, map.oceanLevel);
 
+    f32 thresholdHill = findThreshold(heights, 0.95, map.width, map.height);
+    f32 thresholdMountain = findThreshold(heights, 0.97, map.width, map.height);
 
+    u16 size = map.width * map.height;
 
-    return;
+    for (int i = 0; i < size; ++i) {
+        if (discrete[i] == PLAIN) {
+            if (heights[i] >= thresholdHill && heights[i] < thresholdMountain) {
+                discrete[i] = HILL;
+            }else{
+                discrete[i] = MOUNTAIN;
+            }
+        }
+    }
+
+    auto mapResult = MapResult(
+        std::move(heights),
+        std::move(map.ageMap),
+        std::move(map.platesMap),
+        map.width,
+        map.height,
+        map.oceanLevel
+    );
+
+    return SeparatedMapResult(
+        std::move(mapResult),
+        std::move(discrete),
+        map.oceanLevel,
+        thresholdHill,
+        thresholdMountain
+    );
 }

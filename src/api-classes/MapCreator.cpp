@@ -4,8 +4,9 @@
 
 #include "MapCreator.h"
 
-#include "map/Aligner.h"
-#include "../outer-libs/open-simplex-noise/OpenSimplexNoise.h"
+
+#include "../game/map/elevations-creation/Aligner.h"
+#include "../game/map/elevations-creation/LayerSeparator.h"
 
 void MapCreator::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_heightmap_callback", "callback"), &MapCreator::set_heightmap_callback);
@@ -23,6 +24,8 @@ void MapCreator::createInternal() {
     this->futureResult = std::async(std::launch::async, [this] {
         auto heights = PlatecWrapper::createHeights(MapArgs(), [this](f32 a, u8 b) { callbackHeightMap.call_deferred(a, b); });
         auto aligned = Aligner::applyBorders(Aligner::applyAlign(std::move(heights)));
+
+        auto separated = LayerSeparator::initializeOceanAndThresholds(std::move(aligned));
 
         if (callbackFinish.is_valid()) {
             callbackFinish.call_deferred();

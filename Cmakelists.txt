@@ -43,10 +43,10 @@ project(godot-cpp-template
     LANGUAGES CXX
 )
 
-add_library(${LIBNAME}
-        src/register_types.cpp
-        src/register_types.h
-)
+#add_library(${LIBNAME}
+#        src/register_types.cpp
+#        src/register_types.h
+#)
 
 # Add outer-libs directory to include paths
 #file(GLOB_RECURSE PLATEC_SOURCES

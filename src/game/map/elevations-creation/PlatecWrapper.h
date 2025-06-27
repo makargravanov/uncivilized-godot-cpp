@@ -5,7 +5,7 @@
 #ifndef GODOT_CPP_TEMPLATE_MAPCREATOR_H
 #define GODOT_CPP_TEMPLATE_MAPCREATOR_H
 
-#include "../declarations.h"
+#include "../../../declarations.h"
 #include <future>
 #include <stdint.h>
 

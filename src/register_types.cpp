@@ -1,7 +1,6 @@
 #include "register_types.h"
 
-#include "MapCreator.h"
-#include "example_class.h"
+#include "api-classes/MapCreator.h"
 #include <gdextension_interface.h>
 
 #include <godot_cpp/core/class_db.hpp>
@@ -14,7 +13,6 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
-	GDREGISTER_CLASS(ExampleClass);
         GDREGISTER_CLASS(MapCreator);
 }
 
