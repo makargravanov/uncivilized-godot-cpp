@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://dgysa6n60q7xg"]
+
+[ext_resource type="Script" uid="uid://c5yvqekrf3d46" path="res://view/Camera.gd" id="1_i622u"]
+[ext_resource type="Script" uid="uid://frt4y6cijfg7" path="res://view/play.gd" id="1_nl3mj"]
+
+[node name="Play" type="Node3D"]
+script = ExtResource("1_nl3mj")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 5, 0)
+script = ExtResource("1_i622u")
+move_speed = 20.0
+
+[node name="PlayScene" type="PlayScene" parent="."]
