@@ -18,7 +18,6 @@ protected:
     std::future<void> futureResult;
     godot::Callable callbackHeightMap;
     godot::Callable callbackFinish;
-
 private:
     void createInternal();
     bool allCallbacksValid() const;

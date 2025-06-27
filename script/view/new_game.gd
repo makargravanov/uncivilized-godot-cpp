@@ -13,6 +13,7 @@ func heightmap_callback(procent, cycle):
 
 func finish_callback():
 	print("Готово")
+	get_tree().change_scene_to_file("res://view/Play.tscn")
 
 func _on_button_pressed():
 	mapCreator.create()

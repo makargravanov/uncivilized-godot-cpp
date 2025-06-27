@@ -7,7 +7,7 @@
 #include "map/MapManager.h"
 
 class SystemNexus {
-
+public:
     static MapManager* mapManager;
 };
 
