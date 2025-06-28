@@ -3,3 +3,5 @@
 //
 
 #include "SystemNexus.h"
+
+MapManager* SystemNexus::mapManager = nullptr;

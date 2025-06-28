@@ -3,7 +3,7 @@
 //
 
 #include "MapCreator.h"
-
+#include "../game/SystemNexus.h"
 
 #include "../game/map/elevations-creation/Aligner.h"
 #include "../game/map/elevations-creation/LayerSeparator.h"
@@ -26,6 +26,8 @@ void MapCreator::createInternal() {
         auto aligned = Aligner::applyBorders(Aligner::applyAlign(std::move(heights)));
 
         auto separated = LayerSeparator::initializeOceanAndThresholds(std::move(aligned));
+
+        SystemNexus::configureMap(std::move(separated));
 
         if (callbackFinish.is_valid()) {
             callbackFinish.call_deferred();

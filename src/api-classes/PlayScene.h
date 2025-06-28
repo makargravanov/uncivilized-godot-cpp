@@ -12,6 +12,8 @@
 
 #define CHUNK_SIZE 64
 
+
+class MapManager;
 class PlayScene : public godot::Node{
     GDCLASS(PlayScene, Node)
 
@@ -25,10 +27,7 @@ public:
     void position_updated(const godot::Variant& position);
 
 private:
-    std::future<void> futureResult;
-    f32 tileHorizontalOffset   = 173.205078;
-    f32 oddRowHorizontalOffset = 86.602539;
-    f32 tileVerticalOffset     = 150.0;
+    MapManager* mapManager = nullptr;
 };
 
 
