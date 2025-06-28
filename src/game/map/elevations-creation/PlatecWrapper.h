@@ -52,8 +52,8 @@ struct MapResult {
 
 struct MapArgs {
     u64 seed     = 3;
-    u32 width    = 500;
-    u32 height   = 500;
+    u32 width    = 768; // 12 * 64
+    u32 height   = 512; //  8 * 64
     f32 seaLevel = 0.65;
 
     u32 erosionPeriod  = 60;
