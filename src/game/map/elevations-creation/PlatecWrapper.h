@@ -7,7 +7,6 @@
 
 #include "../../../util/declarations.h"
 #include <future>
-#include <stdint.h>
 
 struct MapResult {
     std::unique_ptr<f32[]> heights;
