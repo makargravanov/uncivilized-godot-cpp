@@ -10,10 +10,8 @@
 
 #include <godot_cpp/classes/node.hpp>
 
-#define CHUNK_SIZE 64
-
-
 class MapManager;
+
 class PlayScene : public godot::Node{
     GDCLASS(PlayScene, Node)
 

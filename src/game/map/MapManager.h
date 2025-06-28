@@ -13,6 +13,7 @@
 #include "godot_cpp/variant/variant.hpp"
 #include <godot_cpp/variant/utility_functions.hpp>
 
+constexpr u8 CHUNK_SIZE = 64;
 
 enum DiscreteLandTypeByHeight : u8;
 
