@@ -7,6 +7,7 @@
 #include "map/MapManager.h"
 #include "map/elevations-creation/LayerSeparator.h"
 
+//FIXME: возможно, стоит улучшить, сделать нормальную регистрацию и авто-отписку через RAII-объект, но пока норм, хоть и костыльно
 class SystemNexus {
 public:
     static void configureMap(SeparatedMapResult mapResult) {
@@ -16,12 +17,20 @@ public:
         return mapManager;
     }
 
+    static void regPlayScene(PlayScene* p) {
+        play = p;
+    }
+    static PlayScene* playScene() {
+        return play;
+    }
+
     static void finalize() {
         delete mapManager;
     }
 
 private:
     static MapManager* mapManager;
+    static PlayScene* play;
 };
 
 #endif //SYSTEMNEXUS_H

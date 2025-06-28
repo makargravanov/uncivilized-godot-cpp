@@ -5,3 +5,4 @@
 #include "SystemNexus.h"
 
 MapManager* SystemNexus::mapManager = nullptr;
+PlayScene* SystemNexus::play = nullptr;

@@ -10,6 +10,9 @@
 
 #include <godot_cpp/classes/node.hpp>
 
+namespace godot {
+    class MultiMeshInstance3D;
+}
 class MapManager;
 
 class PlayScene : public godot::Node{
@@ -23,6 +26,8 @@ public:
     void _process(double delta) override;
 
     void position_updated(const godot::Variant& position);
+    void addISM(godot::MultiMeshInstance3D* meshInstance);
+    void removeISM(godot::MultiMeshInstance3D* meshInstance);
 
 private:
     MapManager* mapManager = nullptr;

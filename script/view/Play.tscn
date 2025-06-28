@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://dgysa6n60q7xg"]
+[gd_scene load_steps=4 format=3 uid="uid://dgysa6n60q7xg"]
 
 [ext_resource type="Script" uid="uid://c5yvqekrf3d46" path="res://view/Camera.gd" id="1_i622u"]
 [ext_resource type="Script" uid="uid://frt4y6cijfg7" path="res://view/play.gd" id="1_nl3mj"]
+[ext_resource type="ArrayMesh" uid="uid://suk1416qrjxh" path="res://hexagon_mesh.tres" id="3_poi7b"]
 
 [node name="Play" type="Node3D"]
 script = ExtResource("1_nl3mj")
@@ -11,4 +12,12 @@ transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 5, 
 script = ExtResource("1_i622u")
 move_speed = 20.0
 
+[node name="OmniLight3D" type="OmniLight3D" parent="Camera3D"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, -0.0134006, 0.137065, 0.0560675)
+omni_range = 19.4114
+
 [node name="PlayScene" type="PlayScene" parent="."]
+
+[node name="HexagonMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.630391, -0.776277, 0, 0.776277, 0.630391, -0.659801, 0.572679, -3.6729)
+mesh = ExtResource("3_poi7b")
