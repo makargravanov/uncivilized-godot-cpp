@@ -37,23 +37,24 @@ struct Chunk {
     godot::MultiMeshInstance3D* hillMeshInstance = nullptr;
     godot::MultiMesh* hillMultiMesh = nullptr;
     godot::MultiMeshInstance3D* mountainMeshInstance = nullptr;
-    godot::MultiMesh* mountainMultiMesh = nullptr;
+    godot::MultiMesh* mountainMultiMesh              = nullptr;
 
-    Chunk(godot::Vector3 position) {
+    explicit Chunk(godot::Vector3 position) {
         plainMeshInstance = memnew(godot::MultiMeshInstance3D);
-        plainMultiMesh = memnew(godot::MultiMesh);
+        plainMultiMesh    = memnew(godot::MultiMesh);
         plainMeshInstance->set_multimesh(plainMultiMesh);
 
         hillMeshInstance = memnew(godot::MultiMeshInstance3D);
-        hillMultiMesh = memnew(godot::MultiMesh);
+        hillMultiMesh    = memnew(godot::MultiMesh);
         hillMeshInstance->set_multimesh(hillMultiMesh);
 
         mountainMeshInstance = memnew(godot::MultiMeshInstance3D);
-        mountainMultiMesh = memnew(godot::MultiMesh);
+        mountainMultiMesh    = memnew(godot::MultiMesh);
         mountainMeshInstance->set_multimesh(mountainMultiMesh);
         initialize(position);
     }
 
+    void resetMultiMesh(godot::MultiMesh* multimesh);
     void initialize(godot::Vector3 position);
 
     Chunk(const Chunk& other) = delete;
@@ -100,9 +101,7 @@ struct Chunk {
 class MapManager {
 
 public:
-    explicit MapManager(SeparatedMapResult sep) :
-        loadedChunks(),
-        elevations(std::move(sep.discrete)),
+    explicit MapManager(SeparatedMapResult sep) : elevations(std::move(sep.discrete)),
         gridWidth(sep.mapResult.width),
         gridHeight(sep.mapResult.height) {}
 
@@ -136,7 +135,7 @@ public:
     static u8 renderDistance;
 
     static godot::Transform3D calculateTileTransform(i32 x, i32 y) {
-        const bool oddRow  = y % 2 == 1;
+        const bool oddRow = std::abs(y % 2) == 1;
         const f32 xPos     = oddRow ? x * tileHorizontalOffset + oddRowHorizontalOffset : x * tileHorizontalOffset;
         constexpr f32 yPos = 0.0f; // В Godot Y - это вертикаль
         const f32 zPos     = y * tileVerticalOffset;

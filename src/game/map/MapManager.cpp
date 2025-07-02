@@ -11,6 +11,13 @@ f32 MapManager::oddRowHorizontalOffset = 86.602539 / 100;
 f32 MapManager::tileVerticalOffset     = 150.0 / 100;
 u8  MapManager::renderDistance         = 1;
 
+void Chunk::resetMultiMesh(godot::MultiMesh* multimesh) {
+    godot::Transform3D empty_transform;
+    for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++) {
+        multimesh->set_instance_transform(i, empty_transform);
+    }
+}
+
 void Chunk::initialize(const godot::Vector3 position) {
     chunkPos = position;
 
@@ -49,6 +56,9 @@ void Chunk::initialize(const godot::Vector3 position) {
     } else {
         godot::print_line("Failed to load mountain mesh, using fallback.");
     }
+    resetMultiMesh(plainMultiMesh);
+    resetMultiMesh(hillMultiMesh);
+    resetMultiMesh(mountainMultiMesh);
 }
 Chunk::~Chunk() {
     if (plainMeshInstance) {
@@ -74,10 +84,6 @@ void MapManager::unloadChunk(godot::Vector2i chunkPos) {
 void MapManager::loadChunk(godot::Vector2i vec) {
     auto newChunk = Chunk(godot::Vector3(vec.x, 0,vec.y));
 
-    bool flag0 = false;
-    bool flag1 = false;
-    bool flag2 = false;
-
     godot::print_line("Loading chunk at: ", vec.x, ", ", vec.y);
     for (i32 localY = 0; localY < CHUNK_SIZE; ++localY) {
         for (i32 localX = 0; localX < CHUNK_SIZE; ++localX) {
@@ -87,16 +93,13 @@ void MapManager::loadChunk(godot::Vector2i vec) {
                 godot::Transform3D tileTransform = calculateTileTransform(globalX, globalY);
                 const auto type = elevations[globalY * gridWidth + globalX];
                 if (type == MOUNTAIN) {
-                    flag0 = true;
                     newChunk.mountainMultiMesh->set_instance_transform(localY * CHUNK_SIZE + localX, tileTransform);
                 }else if (type == HILL) {
-                    flag1 = true;
                     newChunk.hillMultiMesh->set_instance_transform(localY * CHUNK_SIZE + localX, tileTransform);
                 }else if (type == PLAIN) {
-                    flag2 = true;
                     newChunk.plainMultiMesh->set_instance_transform(localY * CHUNK_SIZE + localX, tileTransform);
                 } else {
-
+                    newChunk.plainMultiMesh->set_instance_transform(localY * CHUNK_SIZE + localX, tileTransform);
                 }
             }
         }
@@ -123,6 +126,13 @@ void MapManager::updateVisibleChunks(const godot::Vector3& playerPosition) {
     }
 
     std::vector<godot::Vector2i> chunksToUnload;
+
+
+    for (const auto& chunkPos : chunksToBeVisible) {
+        if (loadedChunks.find(chunkPos) == loadedChunks.end()) {
+            loadChunk(chunkPos);
+        }
+    }
     for (const auto& pair : loadedChunks) {
         if (chunksToBeVisible.find(pair.first) == chunksToBeVisible.end()) {
             chunksToUnload.push_back(pair.first);
@@ -131,12 +141,6 @@ void MapManager::updateVisibleChunks(const godot::Vector3& playerPosition) {
 
     for (const auto& chunkPos : chunksToUnload) {
         unloadChunk(chunkPos);
-    }
-
-    for (const auto& chunkPos : chunksToBeVisible) {
-        if (loadedChunks.find(chunkPos) == loadedChunks.end()) {
-            loadChunk(chunkPos);
-        }
     }
 }
 
