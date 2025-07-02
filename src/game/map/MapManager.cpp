@@ -18,12 +18,12 @@ void Chunk::resetMultiMesh(godot::MultiMesh* multimesh) {
     }
 }
 
-void Chunk::initialize(const godot::Vector3 position) {
+void Chunk::initialize(const godot::Vector3 position, i32 plainCount, i32 hillCount, i32 mountainCount) {
     chunkPos = position;
 
     plainMultiMesh->set_use_colors(true);
     plainMultiMesh->set_transform_format(godot::MultiMesh::TRANSFORM_3D);
-    plainMultiMesh->set_instance_count(CHUNK_SIZE * CHUNK_SIZE);
+    plainMultiMesh->set_instance_count(plainCount);
     if (const godot::Ref<godot::Resource> plainMeshRes =
             godot::ResourceLoader::get_singleton()->load("res://hexagon_mesh.tres");
         plainMeshRes.is_valid()) {
@@ -35,7 +35,7 @@ void Chunk::initialize(const godot::Vector3 position) {
 
     hillMultiMesh->set_use_colors(true);
     hillMultiMesh->set_transform_format(godot::MultiMesh::TRANSFORM_3D);
-    hillMultiMesh->set_instance_count(CHUNK_SIZE * CHUNK_SIZE);
+    hillMultiMesh->set_instance_count(hillCount);
     if (const godot::Ref<godot::Resource> hillMeshRes =
             godot::ResourceLoader::get_singleton()->load("res://hill_hexagon_mesh.tres");
         hillMeshRes.is_valid()) {
@@ -47,7 +47,7 @@ void Chunk::initialize(const godot::Vector3 position) {
 
     mountainMultiMesh->set_use_colors(true);
     mountainMultiMesh->set_transform_format(godot::MultiMesh::TRANSFORM_3D);
-    mountainMultiMesh->set_instance_count(CHUNK_SIZE * CHUNK_SIZE);
+    mountainMultiMesh->set_instance_count(mountainCount);
     if (const godot::Ref<godot::Resource> mountainMeshRes =
             godot::ResourceLoader::get_singleton()->load("res://mountain_hexagon_mesh.tres");
         mountainMeshRes.is_valid()) {
@@ -56,9 +56,6 @@ void Chunk::initialize(const godot::Vector3 position) {
     } else {
         godot::print_line("Failed to load mountain mesh, using fallback.");
     }
-    resetMultiMesh(plainMultiMesh);
-    resetMultiMesh(hillMultiMesh);
-    resetMultiMesh(mountainMultiMesh);
 }
 Chunk::~Chunk() {
     if (plainMeshInstance) {
@@ -82,8 +79,18 @@ void MapManager::unloadChunk(godot::Vector2i chunkPos) {
 }
 
 void MapManager::loadChunk(godot::Vector2i vec) {
-    auto newChunk = Chunk(godot::Vector3(vec.x, 0,vec.y));
+    auto newChunk = Chunk();
+    std::vector<std::pair<i32, godot::Transform3D>> plains;
+    std::vector<std::pair<i32, godot::Transform3D>> mountains;
+    std::vector<std::pair<i32, godot::Transform3D>> hills;
 
+   //plains.reserve(CHUNK_SIZE*CHUNK_SIZE);
+   //mountains.reserve(CHUNK_SIZE*CHUNK_SIZE);
+   //hills.reserve(CHUNK_SIZE*CHUNK_SIZE);
+
+    i32 i = 0;
+    i32 j = 0;
+    i32 k = 0;
     godot::print_line("Loading chunk at: ", vec.x, ", ", vec.y);
     for (i32 localY = 0; localY < CHUNK_SIZE; ++localY) {
         for (i32 localX = 0; localX < CHUNK_SIZE; ++localX) {
@@ -93,16 +100,35 @@ void MapManager::loadChunk(godot::Vector2i vec) {
                 godot::Transform3D tileTransform = calculateTileTransform(globalX, globalY);
                 const auto type = elevations[globalY * gridWidth + globalX];
                 if (type == MOUNTAIN) {
-                    newChunk.mountainMultiMesh->set_instance_transform(localY * CHUNK_SIZE + localX, tileTransform);
+                    mountains.emplace_back(std::pair(i, tileTransform));
+                    i++;
                 }else if (type == HILL) {
-                    newChunk.hillMultiMesh->set_instance_transform(localY * CHUNK_SIZE + localX, tileTransform);
+                    hills.emplace_back(std::pair(j, tileTransform));
+                    j++;
                 }else if (type == PLAIN) {
-                    newChunk.plainMultiMesh->set_instance_transform(localY * CHUNK_SIZE + localX, tileTransform);
+                    plains.emplace_back(std::pair(k, tileTransform));
+                    k++;
                 } else {
-                    newChunk.plainMultiMesh->set_instance_transform(localY * CHUNK_SIZE + localX, tileTransform);
+                    plains.emplace_back(std::pair(k, tileTransform));
+                    k++;
                 }
             }
         }
+    }
+    godot::print_line(plains.size());
+    newChunk.initialize(godot::Vector3(vec.x, 0,vec.y),plains.size(),hills.size(),mountains.size());
+
+    for(auto& [fst, snd] : plains){
+        if (fst>plains.size()) {
+            godot::print_line(fst);
+        }
+        newChunk.plainMultiMesh->set_instance_transform(fst,snd);
+    }
+    for(auto& [fst, snd] : mountains){
+        newChunk.mountainMultiMesh->set_instance_transform(fst,snd);
+    }
+    for(auto& [fst, snd] : hills){
+        newChunk.hillMultiMesh->set_instance_transform(fst,snd);
     }
 
     loadedChunks.emplace(vec, std::move(newChunk));

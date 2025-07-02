@@ -39,7 +39,7 @@ struct Chunk {
     godot::MultiMeshInstance3D* mountainMeshInstance = nullptr;
     godot::MultiMesh* mountainMultiMesh              = nullptr;
 
-    explicit Chunk(godot::Vector3 position) {
+    explicit Chunk() {
         plainMeshInstance = memnew(godot::MultiMeshInstance3D);
         plainMultiMesh    = memnew(godot::MultiMesh);
         plainMeshInstance->set_multimesh(plainMultiMesh);
@@ -51,11 +51,10 @@ struct Chunk {
         mountainMeshInstance = memnew(godot::MultiMeshInstance3D);
         mountainMultiMesh    = memnew(godot::MultiMesh);
         mountainMeshInstance->set_multimesh(mountainMultiMesh);
-        initialize(position);
     }
 
     void resetMultiMesh(godot::MultiMesh* multimesh);
-    void initialize(godot::Vector3 position);
+    void initialize(godot::Vector3 position, i32 plainCount, i32 hillCount, i32 mountainCount);
 
     Chunk(const Chunk& other) = delete;
     Chunk& operator=(const Chunk& other) = delete;
