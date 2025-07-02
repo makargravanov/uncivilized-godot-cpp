@@ -84,10 +84,11 @@ void MapManager::loadChunk(godot::Vector2i vec) {
     std::vector<std::pair<i32, godot::Transform3D>> mountains;
     std::vector<std::pair<i32, godot::Transform3D>> hills;
 
-   //plains.reserve(CHUNK_SIZE*CHUNK_SIZE);
-   //mountains.reserve(CHUNK_SIZE*CHUNK_SIZE);
-   //hills.reserve(CHUNK_SIZE*CHUNK_SIZE);
+    plains.reserve(CHUNK_SIZE*CHUNK_SIZE);
+    mountains.reserve(CHUNK_SIZE*CHUNK_SIZE);
+    hills.reserve(CHUNK_SIZE*CHUNK_SIZE);
 
+    //TODO: рассмотреть возможность расширения и реального учёта индексов, использования координат, всё таки мб
     i32 i = 0;
     i32 j = 0;
     i32 k = 0;
