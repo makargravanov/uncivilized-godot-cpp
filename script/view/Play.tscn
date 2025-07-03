@@ -1,8 +1,18 @@
-[gd_scene load_steps=4 format=3 uid="uid://dgysa6n60q7xg"]
+[gd_scene load_steps=7 format=3 uid="uid://dgysa6n60q7xg"]
 
 [ext_resource type="Script" uid="uid://c5yvqekrf3d46" path="res://view/Camera.gd" id="1_i622u"]
 [ext_resource type="Script" uid="uid://frt4y6cijfg7" path="res://view/play.gd" id="1_nl3mj"]
 [ext_resource type="ArrayMesh" uid="uid://suk1416qrjxh" path="res://hexagon_mesh.tres" id="3_poi7b"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_poi7b"]
+
+[sub_resource type="Sky" id="Sky_bfdex"]
+sky_material = SubResource("ProceduralSkyMaterial_poi7b")
+
+[sub_resource type="Environment" id="Environment_3fk20"]
+background_mode = 2
+sky = SubResource("Sky_bfdex")
+ambient_light_source = 3
 
 [node name="Play" type="Node3D"]
 script = ExtResource("1_nl3mj")
@@ -21,3 +31,6 @@ omni_range = 19.4114
 [node name="HexagonMesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.630391, -0.776277, 0, 0.776277, 0.630391, -0.659801, 0.572679, -3.6729)
 mesh = ExtResource("3_poi7b")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_3fk20")

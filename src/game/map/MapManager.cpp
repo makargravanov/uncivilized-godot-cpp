@@ -9,7 +9,7 @@
 f32 MapManager::tileHorizontalOffset   = 173.205078 / 100;
 f32 MapManager::oddRowHorizontalOffset = 86.602539 / 100;
 f32 MapManager::tileVerticalOffset     = 150.0 / 100;
-u8  MapManager::renderDistance         = 1;
+u8  MapManager::renderDistance         = 2;
 
 void Chunk::resetMultiMesh(godot::MultiMesh* multimesh) {
     godot::Transform3D empty_transform;
@@ -18,7 +18,7 @@ void Chunk::resetMultiMesh(godot::MultiMesh* multimesh) {
     }
 }
 
-void Chunk::initialize(const godot::Vector3 position, i32 plainCount, i32 hillCount, i32 mountainCount) {
+void Chunk::initialize(const godot::Vector3 position, i32 plainCount, i32 hillCount, i32 mountainCount, i32 oceanCount) {
     chunkPos = position;
 
     plainMultiMesh->set_use_colors(true);
@@ -56,6 +56,18 @@ void Chunk::initialize(const godot::Vector3 position, i32 plainCount, i32 hillCo
     } else {
         godot::print_line("Failed to load mountain mesh, using fallback.");
     }
+
+    oceanMultiMesh->set_use_colors(true);
+    oceanMultiMesh->set_transform_format(godot::MultiMesh::TRANSFORM_3D);
+    oceanMultiMesh->set_instance_count(oceanCount);
+    if (const godot::Ref<godot::Resource> oceanMeshRes =
+            godot::ResourceLoader::get_singleton()->load("res://ocean_hexagon_mesh.tres");
+        oceanMeshRes.is_valid()) {
+        oceanMultiMesh->set_mesh(oceanMeshRes);
+        SystemNexus::playScene()->addISM(oceanMeshInstance);
+    } else {
+        godot::print_line("Failed to load ocean mesh, using fallback.");
+    }
 }
 Chunk::~Chunk() {
     if (plainMeshInstance) {
@@ -70,6 +82,10 @@ Chunk::~Chunk() {
         SystemNexus::playScene()->removeISM(mountainMeshInstance);
         godot::memdelete(mountainMeshInstance);
     }
+    if (oceanMeshInstance) {
+        SystemNexus::playScene()->removeISM(oceanMeshInstance);
+        godot::memdelete(oceanMeshInstance);
+    }
 }
 
 void MapManager::unloadChunk(godot::Vector2i chunkPos) {
@@ -83,15 +99,17 @@ void MapManager::loadChunk(godot::Vector2i vec) {
     std::vector<std::pair<i32, godot::Transform3D>> plains;
     std::vector<std::pair<i32, godot::Transform3D>> mountains;
     std::vector<std::pair<i32, godot::Transform3D>> hills;
+    std::vector<std::pair<i32, godot::Transform3D>> oceans;
 
     plains.reserve(CHUNK_SIZE*CHUNK_SIZE);
     mountains.reserve(CHUNK_SIZE*CHUNK_SIZE);
     hills.reserve(CHUNK_SIZE*CHUNK_SIZE);
-
+    oceans.reserve(CHUNK_SIZE*CHUNK_SIZE);
     //TODO: рассмотреть возможность расширения и реального учёта индексов, использования координат, всё таки мб
     i32 i = 0;
     i32 j = 0;
     i32 k = 0;
+    i32 l = 0;
     godot::print_line("Loading chunk at: ", vec.x, ", ", vec.y);
     for (i32 localY = 0; localY < CHUNK_SIZE; ++localY) {
         for (i32 localX = 0; localX < CHUNK_SIZE; ++localX) {
@@ -110,19 +128,16 @@ void MapManager::loadChunk(godot::Vector2i vec) {
                     plains.emplace_back(std::pair(k, tileTransform));
                     k++;
                 } else {
-                    plains.emplace_back(std::pair(k, tileTransform));
-                    k++;
+                    oceans.emplace_back(std::pair(l, tileTransform));
+                    l++;
                 }
             }
         }
     }
-    godot::print_line(plains.size());
-    newChunk.initialize(godot::Vector3(vec.x, 0,vec.y),plains.size(),hills.size(),mountains.size());
+    godot::print_line(oceans.size());
+    newChunk.initialize(godot::Vector3(vec.x, 0, vec.y), plains.size(), hills.size(), mountains.size(), oceans.size());
 
     for(auto& [fst, snd] : plains){
-        if (fst>plains.size()) {
-            godot::print_line(fst);
-        }
         newChunk.plainMultiMesh->set_instance_transform(fst,snd);
     }
     for(auto& [fst, snd] : mountains){
@@ -130,6 +145,9 @@ void MapManager::loadChunk(godot::Vector2i vec) {
     }
     for(auto& [fst, snd] : hills){
         newChunk.hillMultiMesh->set_instance_transform(fst,snd);
+    }
+    for(auto& [fst, snd] : oceans){
+        newChunk.oceanMultiMesh->set_instance_transform(fst,snd);
     }
 
     loadedChunks.emplace(vec, std::move(newChunk));

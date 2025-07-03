@@ -1,7 +1,7 @@
 extends Node
 
 func _ready():
-	var model_path = "res://mountain_hexagon_mesh.glb"
+	var model_path = "res://hexagon_mesh.glb"
 	
 	var scene = load(model_path)
 	var node = scene.instantiate()
@@ -11,7 +11,7 @@ func _ready():
 	var mesh_instance = find_mesh_instance(node)
 	if mesh_instance and mesh_instance.mesh:
 		# Сохраняем меш как .tres
-		ResourceSaver.save(mesh_instance.mesh, "res://mountain_hexagon_mesh.tres")
+		ResourceSaver.save(mesh_instance.mesh, "res://ocean_hexagon_mesh.tres")
 		print("Mesh saved as .tres!")
 	else:
 		printerr("Mesh not found!")

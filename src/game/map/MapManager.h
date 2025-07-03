@@ -38,6 +38,8 @@ struct Chunk {
     godot::MultiMesh* hillMultiMesh = nullptr;
     godot::MultiMeshInstance3D* mountainMeshInstance = nullptr;
     godot::MultiMesh* mountainMultiMesh              = nullptr;
+    godot::MultiMeshInstance3D* oceanMeshInstance    = nullptr;
+    godot::MultiMesh* oceanMultiMesh                 = nullptr;
 
     explicit Chunk() {
         plainMeshInstance = memnew(godot::MultiMeshInstance3D);
@@ -51,10 +53,14 @@ struct Chunk {
         mountainMeshInstance = memnew(godot::MultiMeshInstance3D);
         mountainMultiMesh    = memnew(godot::MultiMesh);
         mountainMeshInstance->set_multimesh(mountainMultiMesh);
+
+        oceanMeshInstance = memnew(godot::MultiMeshInstance3D);
+        oceanMultiMesh    = memnew(godot::MultiMesh);
+        oceanMeshInstance->set_multimesh(oceanMultiMesh);
     }
 
     void resetMultiMesh(godot::MultiMesh* multimesh);
-    void initialize(godot::Vector3 position, i32 plainCount, i32 hillCount, i32 mountainCount);
+    void initialize(godot::Vector3 position, i32 plainCount, i32 hillCount, i32 mountainCount, i32 oceanCount);
 
     Chunk(const Chunk& other) = delete;
     Chunk& operator=(const Chunk& other) = delete;
@@ -63,13 +69,16 @@ struct Chunk {
        : chunkPos(std::move(other.chunkPos)), plainMeshInstance(other.plainMeshInstance),
          plainMultiMesh(other.plainMultiMesh), hillMeshInstance(other.hillMeshInstance),
          hillMultiMesh(other.hillMultiMesh), mountainMeshInstance(other.mountainMeshInstance),
-         mountainMultiMesh(other.mountainMultiMesh) {
+         mountainMultiMesh(other.mountainMultiMesh), oceanMeshInstance(other.oceanMeshInstance),
+         oceanMultiMesh(other.oceanMultiMesh) {
         other.plainMeshInstance = nullptr;
         other.plainMultiMesh = nullptr;
         other.hillMeshInstance = nullptr;
         other.hillMultiMesh = nullptr;
         other.mountainMeshInstance = nullptr;
         other.mountainMultiMesh = nullptr;
+        other.oceanMeshInstance = nullptr;
+        other.oceanMultiMesh = nullptr;
     }
 
     Chunk& operator=(Chunk&& other) noexcept {
@@ -83,6 +92,8 @@ struct Chunk {
         hillMultiMesh        = other.hillMultiMesh;
         mountainMeshInstance = other.mountainMeshInstance;
         mountainMultiMesh    = other.mountainMultiMesh;
+        oceanMeshInstance = other.oceanMeshInstance;
+        oceanMultiMesh    = other.oceanMultiMesh;
 
         other.plainMeshInstance = nullptr;
         other.plainMultiMesh = nullptr;
@@ -90,6 +101,8 @@ struct Chunk {
         other.hillMultiMesh = nullptr;
         other.mountainMeshInstance = nullptr;
         other.mountainMultiMesh = nullptr;
+        other.oceanMeshInstance = nullptr;
+        other.oceanMultiMesh = nullptr;
 
         return *this;
     }
