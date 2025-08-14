@@ -12,8 +12,8 @@ f32 MapManager::tileVerticalOffset     = 150.0 / 100;
 u8  MapManager::renderDistance         = 2;
 
 void Chunk::resetMultiMesh(godot::MultiMesh* multimesh) {
-    godot::Transform3D empty_transform;
     for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++) {
+        godot::Transform3D empty_transform;
         multimesh->set_instance_transform(i, empty_transform);
     }
 }

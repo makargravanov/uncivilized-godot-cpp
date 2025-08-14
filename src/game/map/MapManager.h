@@ -59,7 +59,7 @@ struct Chunk {
         oceanMeshInstance->set_multimesh(oceanMultiMesh);
     }
 
-    void resetMultiMesh(godot::MultiMesh* multimesh);
+    static void resetMultiMesh(godot::MultiMesh* multimesh);
     void initialize(godot::Vector3 position, i32 plainCount, i32 hillCount, i32 mountainCount, i32 oceanCount);
 
     Chunk(const Chunk& other) = delete;

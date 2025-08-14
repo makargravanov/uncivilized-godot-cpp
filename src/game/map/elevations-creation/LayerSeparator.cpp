@@ -27,11 +27,11 @@ f32 LayerSeparator::findThreshold(           // от 0.0 до 1.0
     return quantile(vec, landPercentage);
 }
 
-void LayerSeparator::fillOceanOrPlain(const std::unique_ptr<f32[]>& heights, std::unique_ptr<DiscreteLandTypeByHeight[]>& discrete,
+void LayerSeparator::fillOceanOrValleyOrPlain(const std::unique_ptr<f32[]>& heights, std::unique_ptr<DiscreteLandTypeByHeight[]>& discrete,
     const u32 width, const u32 height, const f32 oceanLevel) {
 
     for (u32 i = 0; i < width * height; ++i) {
-        discrete[i] = DiscreteLandTypeByHeight::PLAIN;
+        discrete[i] = PLAIN;
     }
 
     std::queue<std::pair<u32, u32>> toExpand;
@@ -39,22 +39,22 @@ void LayerSeparator::fillOceanOrPlain(const std::unique_ptr<f32[]>& heights, std
     for (u32 x = 0; x < width; ++x) {
         if (heights[x] <= oceanLevel) {
             toExpand.push({x, 0});
-            discrete[x] = DiscreteLandTypeByHeight::OCEAN;
+            discrete[x] = OCEAN;
         }
         if (heights[(height - 1) * width + x] <= oceanLevel) {
             toExpand.push({x, height - 1});
-            discrete[(height - 1) * width + x] = DiscreteLandTypeByHeight::OCEAN;
+            discrete[(height - 1) * width + x] = OCEAN;
         }
     }
 
     for (u32 y = 0; y < height; ++y) {
         if (heights[y * width] <= oceanLevel) {
             toExpand.push({0, y});
-            discrete[y * width] = DiscreteLandTypeByHeight::OCEAN;
+            discrete[y * width] = OCEAN;
         }
         if (heights[y * width + (width - 1)] <= oceanLevel) {
             toExpand.push({width - 1, y});
-            discrete[y * width + (width - 1)] = DiscreteLandTypeByHeight::OCEAN;
+            discrete[y * width + (width - 1)] = OCEAN;
         }
     }
 
@@ -71,12 +71,18 @@ void LayerSeparator::fillOceanOrPlain(const std::unique_ptr<f32[]>& heights, std
                 i32 ny = static_cast<i32>(y) + dy;
                 if (nx >= 0 && nx < static_cast<i32>(width) && ny >= 0 && ny < static_cast<i32>(height)) {
                     u32 nidx = ny * width + nx;
-                    if (discrete[nidx] == DiscreteLandTypeByHeight::PLAIN && heights[nidx] <= oceanLevel) {
-                        discrete[nidx] = DiscreteLandTypeByHeight::OCEAN;
+                    if (discrete[nidx] == PLAIN && heights[nidx] <= oceanLevel) {
+                        discrete[nidx] = OCEAN;
                         toExpand.push({static_cast<u32>(nx), static_cast<u32>(ny)});
                     }
                 }
             }
+        }
+    }
+
+    for (u32 i = 0; i < width * height; ++i) {
+        if (discrete[i] == PLAIN && heights[i] <= oceanLevel) {
+            discrete[i] = VALLEY;
         }
     }
 }
@@ -85,7 +91,7 @@ SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map)
     auto heights = std::move(map.heights);
     auto discrete   = std::make_unique<DiscreteLandTypeByHeight[]>(map.height * map.width);
 
-    fillOceanOrPlain(heights, discrete, map.width, map.height, map.oceanLevel);
+    fillOceanOrValleyOrPlain(heights, discrete, map.width, map.height, map.oceanLevel);
 
     f32 thresholdHill = findThreshold(heights, 0.95, map.width, map.height);
     f32 thresholdMountain = findThreshold(heights, 0.97, map.width, map.height);

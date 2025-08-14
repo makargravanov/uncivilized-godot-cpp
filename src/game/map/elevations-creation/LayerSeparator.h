@@ -53,7 +53,7 @@ private:
         const std::unique_ptr<f32[]>& heightMap, f32 landPercentage,
         const u32 width, const u32 height);
 
-    static void fillOceanOrPlain(const std::unique_ptr<f32[]>& heights, std::unique_ptr<DiscreteLandTypeByHeight[]>& discrete,
+    static void fillOceanOrValleyOrPlain(const std::unique_ptr<f32[]>& heights, std::unique_ptr<DiscreteLandTypeByHeight[]>& discrete,
         u32 width, u32 height, f32 oceanLevel);
 };
 

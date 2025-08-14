@@ -7,8 +7,9 @@
 #include "../../../util/declarations.h"
 enum DiscreteLandTypeByHeight : u8 {
     OCEAN = 0,
-    PLAIN = 1,
-    HILL = 2,
-    MOUNTAIN = 3
+    VALLEY = 1,
+    PLAIN = 2,
+    HILL = 3,
+    MOUNTAIN = 4
 };
 #endif //DISCRETEHEIGHTLANDTYPE_H
