@@ -63,6 +63,17 @@ struct MapArgs {
 
     u8 cycleCount = 2;
     u8 numPlates  = 10;
+
+    MapArgs& setSeed(u64 value) { seed = value; return *this; }
+    MapArgs& setWidth(u32 value) { width = value; return *this; }
+    MapArgs& setHeight(u32 value) { height = value; return *this; }
+    MapArgs& setSeaLevel(f32 value) { seaLevel = value; return *this; }
+    MapArgs& setErosionPeriod(u32 value) { erosionPeriod = value; return *this; }
+    MapArgs& setFoldingRatio(f32 value) { foldingRatio = value; return *this; }
+    MapArgs& setAggrOverlapAbs(u32 value) { aggrOverlapAbs = value; return *this; }
+    MapArgs& setAggrOverlapRel(f32 value) { aggrOverlapRel = value; return *this; }
+    MapArgs& setCycleCount(u8 value) { cycleCount = value; return *this; }
+    MapArgs& setNumPlates(u8 value) { numPlates = value; return *this; }
 };
 
 using ProgressCallback = std::function<void(f32 progress, u8 cycle)>;
