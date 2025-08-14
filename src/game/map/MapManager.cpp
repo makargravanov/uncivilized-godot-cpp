@@ -9,7 +9,7 @@
 f32 MapManager::tileHorizontalOffset   = 173.205078 / 100;
 f32 MapManager::oddRowHorizontalOffset = 86.602539 / 100;
 f32 MapManager::tileVerticalOffset     = 150.0 / 100;
-u8  MapManager::renderDistance         = 2;
+u8  MapManager::renderDistance         = 4;
 
 void Chunk::resetMultiMesh(godot::MultiMesh* multimesh) {
     for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++) {
