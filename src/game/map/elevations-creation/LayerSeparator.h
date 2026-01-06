@@ -46,8 +46,8 @@ struct SeparatedMapResult {
 
 class LayerSeparator {
 public:
-    static SeparatedMapResult initializeOceanAndThresholds(MapResult&& map) noexcept;
-
+    static SeparatedMapResult initializeOceanAndThresholds(MapResult&& map);
+    static SeparatedMapResult initializeOceanAndThresholds(MapResult&& map, f32 oceanLevelOverride);
 private:
     static f32 findThreshold(
         const std::unique_ptr<f32[]>& heightMap, f32 landPercentage,

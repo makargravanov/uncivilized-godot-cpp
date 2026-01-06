@@ -87,13 +87,13 @@ void LayerSeparator::fillOceanOrValleyOrPlain(const std::unique_ptr<f32[]>& heig
     }
 }
 
-SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map) noexcept {
-    auto heights = std::move(map.heights);
-    auto discrete   = std::make_unique<DiscreteLandTypeByHeight[]>(map.height * map.width);
+SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map) {
+    auto heights  = std::move(map.heights);
+    auto discrete = std::make_unique<DiscreteLandTypeByHeight[]>(map.height * map.width);
 
     fillOceanOrValleyOrPlain(heights, discrete, map.width, map.height, map.oceanLevel);
 
-    f32 thresholdHill = findThreshold(heights, 0.95, map.width, map.height);
+    f32 thresholdHill     = findThreshold(heights, 0.95, map.width, map.height);
     f32 thresholdMountain = findThreshold(heights, 0.97, map.width, map.height);
 
     u32 size = map.width * map.height;
@@ -102,28 +102,24 @@ SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map)
         if (discrete[i] == PLAIN) {
             if (heights[i] >= thresholdHill && heights[i] < thresholdMountain) {
                 discrete[i] = HILL;
-            }else if (heights[i] >= thresholdMountain){
+            } else if (heights[i] >= thresholdMountain) {
                 discrete[i] = MOUNTAIN;
-            }else {
-
+            } else {
             }
         }
     }
 
     auto mapResult = MapResult(
-        std::move(heights),
-        std::move(map.ageMap),
-        std::move(map.platesMap),
-        map.width,
-        map.height,
-        map.oceanLevel
-    );
+        std::move(heights), std::move(map.ageMap), std::move(map.platesMap), map.width, map.height, map.oceanLevel);
 
     return SeparatedMapResult(
-        std::move(mapResult),
-        std::move(discrete),
-        map.oceanLevel,
-        thresholdHill,
-        thresholdMountain
-    );
+        std::move(mapResult), std::move(discrete), map.oceanLevel, thresholdHill, thresholdMountain);
 }
+SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map, f32 oceanLevelOverride) {
+    map.oceanLevel = oceanLevelOverride;
+    return initializeOceanAndThresholds(std::move(map));
+}
+
+//TODO:
+// - Организовать выравнивание высот относительно уровня океана
+// - Отдельно сохранять рельеф дна

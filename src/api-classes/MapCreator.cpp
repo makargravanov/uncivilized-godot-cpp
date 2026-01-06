@@ -22,12 +22,12 @@ void MapCreator::create() {
 void MapCreator::createInternal() {
     //TODO: добавить callbacks для переходов между стадиями
     this->futureResult = std::async(std::launch::async, [this] {
-        auto heights = PlatecWrapper::createHeights(MapArgs().setSeaLevel(1.0), [this](f32 a, u8 b)
+        auto heights = PlatecWrapper::createHeights(MapArgs(), [this](f32 a, u8 b)
             { callbackHeightMap.call_deferred(a, b); });
 
         auto aligned = Aligner::applyBorders(Aligner::applyAlign(std::move(heights)));
 
-        auto separated = LayerSeparator::initializeOceanAndThresholds(std::move(aligned));
+        auto separated = LayerSeparator::initializeOceanAndThresholds(std::move(aligned), 1);
 
         SystemNexus::configureMap(std::move(separated));
 
