@@ -51,17 +51,17 @@ struct MapResult {
 };
 
 struct MapArgs {
-    u64 seed     = 45;
+    u64 seed     = 23;
     u32 width    = 448;//7*64
     u32 height   = 256;//4*64
     f32 seaLevel = 0.65;
 
-    u32 erosionPeriod  = 60;
-    f32 foldingRatio   = 0.02;
+    u32 erosionPeriod  = 200;
+    f32 foldingRatio   = 0.01;
     u32 aggrOverlapAbs = 1000000;
-    f32 aggrOverlapRel = 0.33;
+    f32 aggrOverlapRel = 0.2;
 
-    u8 cycleCount = 2;
+    u8 cycleCount = 5;
     u8 numPlates  = 10;
 
     MapArgs& setSeed(u64 value) { seed = value; return *this; }
