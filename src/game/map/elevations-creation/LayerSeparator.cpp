@@ -41,22 +41,22 @@ void LayerSeparator::fillOceanOrValleyOrPlain(const std::unique_ptr<f32[]>& heig
 
     for (u32 x = 0; x < width; ++x) {
         if (heights[x] <= oceanLevel) {
-            toExpand.push({x, 0});
+            toExpand.emplace(x, 0);
             discrete[x] = OCEAN;
         }
         if (heights[(height - 1) * width + x] <= oceanLevel) {
-            toExpand.push({x, height - 1});
+            toExpand.emplace(x, height - 1);
             discrete[(height - 1) * width + x] = OCEAN;
         }
     }
 
     for (u32 y = 0; y < height; ++y) {
         if (heights[y * width] <= oceanLevel) {
-            toExpand.push({0, y});
+            toExpand.emplace(0, y);
             discrete[y * width] = OCEAN;
         }
         if (heights[y * width + (width - 1)] <= oceanLevel) {
-            toExpand.push({width - 1, y});
+            toExpand.emplace(width - 1, y);
             discrete[y * width + (width - 1)] = OCEAN;
         }
     }
@@ -76,7 +76,7 @@ void LayerSeparator::fillOceanOrValleyOrPlain(const std::unique_ptr<f32[]>& heig
                     u32 nidx = ny * width + nx;
                     if (discrete[nidx] == PLAIN && heights[nidx] <= oceanLevel) {
                         discrete[nidx] = OCEAN;
-                        toExpand.push({static_cast<u32>(nx), static_cast<u32>(ny)});
+                        toExpand.emplace(static_cast<u32>(nx), static_cast<u32>(ny));
                     }
                 }
             }
