@@ -2,13 +2,20 @@
 // Created by Alex on 27.06.2025.
 //
 
+
 #ifndef MAPMANAGER_H
 #define MAPMANAGER_H
+
 #include "util/declarations.h"
+#include "util/GodotPtr.h"
 #include "elevations-creation/LayerSeparator.h"
+#include "elevations-creation/DiscreteLandTypeByHeight.h"
+#include "game/map/LandTypeConfig.h"
+
 #include <future>
 #include <map>
 #include <memory>
+#include <unordered_map>
 
 #include "godot_cpp/variant/variant.hpp"
 #include <godot_cpp/classes/mesh.hpp>
@@ -19,8 +26,6 @@
 
 constexpr u8 CHUNK_SIZE = 64;
 
-enum DiscreteLandTypeByHeight : u8;
-
 template <>
 struct std::hash<godot::Vector2i> {
     size_t operator()(const godot::Vector2i& point) const noexcept {
@@ -28,109 +33,70 @@ struct std::hash<godot::Vector2i> {
     }
 };
 
+struct LandTypeMeshData {
+    GodotPtr<godot::MultiMeshInstance3D> instance;
+    GodotPtr<godot::MultiMesh> multiMesh;
+
+    LandTypeMeshData() = default;
+
+    LandTypeMeshData(LandTypeMeshData&&) = default;
+    LandTypeMeshData& operator=(LandTypeMeshData&&) = default;
+
+    LandTypeMeshData(const LandTypeMeshData&) = delete;
+    LandTypeMeshData& operator=(const LandTypeMeshData&) = delete;
+
+    void create();
+    bool initialize(i32 instanceCount, const char* meshPath) const;
+    void addToScene() const;
+    void removeFromScene() const;
+
+    void setInstanceTransform(i32 index, const godot::Transform3D& transform) const {
+        if (multiMesh) {
+            multiMesh->set_instance_transform(index, transform);
+        }
+    }
+};
+
 struct Chunk {
     godot::Vector3 chunkPos;
-    godot::MultiMeshInstance3D* plainMeshInstance = nullptr;
-    godot::MultiMesh* plainMultiMesh = nullptr;
-    godot::MultiMeshInstance3D* hillMeshInstance = nullptr;
-    godot::MultiMesh* hillMultiMesh = nullptr;
-    godot::MultiMeshInstance3D* mountainMeshInstance = nullptr;
-    godot::MultiMesh* mountainMultiMesh              = nullptr;
-    godot::MultiMeshInstance3D* oceanMeshInstance    = nullptr;
-    godot::MultiMesh* oceanMultiMesh                 = nullptr;
+    std::map<DiscreteLandTypeByHeight, LandTypeMeshData> meshes;
 
-    explicit Chunk() {
-        plainMeshInstance = memnew(godot::MultiMeshInstance3D);
-        plainMultiMesh    = memnew(godot::MultiMesh);
-        plainMeshInstance->set_multimesh(plainMultiMesh);
+    Chunk() = default;
 
-        hillMeshInstance = memnew(godot::MultiMeshInstance3D);
-        hillMultiMesh    = memnew(godot::MultiMesh);
-        hillMeshInstance->set_multimesh(hillMultiMesh);
+    Chunk(Chunk&&) = default;
+    Chunk& operator=(Chunk&&) = default;
 
-        mountainMeshInstance = memnew(godot::MultiMeshInstance3D);
-        mountainMultiMesh    = memnew(godot::MultiMesh);
-        mountainMeshInstance->set_multimesh(mountainMultiMesh);
-
-        oceanMeshInstance = memnew(godot::MultiMeshInstance3D);
-        oceanMultiMesh    = memnew(godot::MultiMesh);
-        oceanMeshInstance->set_multimesh(oceanMultiMesh);
-    }
-
-    static void resetMultiMesh(godot::MultiMesh* multimesh);
-    void initialize(godot::Vector3 position, i32 plainCount, i32 hillCount, i32 mountainCount, i32 oceanCount);
-
-    Chunk(const Chunk& other) = delete;
-    Chunk& operator=(const Chunk& other) = delete;
-
-    Chunk(Chunk&& other) noexcept
-       : chunkPos(other.chunkPos), plainMeshInstance(other.plainMeshInstance),
-         plainMultiMesh(other.plainMultiMesh), hillMeshInstance(other.hillMeshInstance),
-         hillMultiMesh(other.hillMultiMesh), mountainMeshInstance(other.mountainMeshInstance),
-         mountainMultiMesh(other.mountainMultiMesh), oceanMeshInstance(other.oceanMeshInstance),
-         oceanMultiMesh(other.oceanMultiMesh) {
-        other.plainMeshInstance = nullptr;
-        other.plainMultiMesh = nullptr;
-        other.hillMeshInstance = nullptr;
-        other.hillMultiMesh = nullptr;
-        other.mountainMeshInstance = nullptr;
-        other.mountainMultiMesh = nullptr;
-        other.oceanMeshInstance = nullptr;
-        other.oceanMultiMesh = nullptr;
-    }
-
-    Chunk& operator=(Chunk&& other) noexcept {
-        if (this == &other) {
-            return *this;
-        }
-        chunkPos             = other.chunkPos;
-        plainMeshInstance    = other.plainMeshInstance;
-        plainMultiMesh       = other.plainMultiMesh;
-        hillMeshInstance     = other.hillMeshInstance;
-        hillMultiMesh        = other.hillMultiMesh;
-        mountainMeshInstance = other.mountainMeshInstance;
-        mountainMultiMesh    = other.mountainMultiMesh;
-        oceanMeshInstance = other.oceanMeshInstance;
-        oceanMultiMesh    = other.oceanMultiMesh;
-
-        other.plainMeshInstance = nullptr;
-        other.plainMultiMesh = nullptr;
-        other.hillMeshInstance = nullptr;
-        other.hillMultiMesh = nullptr;
-        other.mountainMeshInstance = nullptr;
-        other.mountainMultiMesh = nullptr;
-        other.oceanMeshInstance = nullptr;
-        other.oceanMultiMesh = nullptr;
-
-        return *this;
-    }
+    Chunk(const Chunk&) = delete;
+    Chunk& operator=(const Chunk&) = delete;
 
     ~Chunk();
+
+    void initialize(
+        const godot::Vector3& position,
+        const std::map<DiscreteLandTypeByHeight, i32>& typeCounts
+    );
 };
 
 class MapManager {
-
 public:
-    explicit MapManager(SeparatedMapResult sep) : elevations(std::move(sep.discrete)),
-        gridWidth(sep.mapResult.width),
-        gridHeight(sep.mapResult.height) {}
+    explicit MapManager(SeparatedMapResult sep)
+        : elevations(std::move(sep.discrete)),
+          gridWidth(sep.mapResult.width),
+          gridHeight(sep.mapResult.height) {}
 
-    MapManager(const MapManager& other)                = delete;
-    MapManager& operator=(const MapManager& other)     = delete;
-
-    MapManager(MapManager&& other) noexcept            = delete;
-    MapManager& operator=(MapManager&& other) noexcept = delete;
+    MapManager(const MapManager&) = delete;
+    MapManager& operator=(const MapManager&) = delete;
+    MapManager(MapManager&&) noexcept = delete;
+    MapManager& operator=(MapManager&&) noexcept = delete;
 
     void unloadChunk(godot::Vector2i vec);
     void loadChunk(godot::Vector2i vec);
     void updateVisibleChunks(const godot::Vector3& playerPosition);
     static bool isChunkInRenderDistance(const godot::Vector2i& chunkPos, const godot::Vector2i& playerChunkPos);
     void positionUpdated(const godot::Variant& position);
-
     static godot::Vector3 getChunkPos(const godot::Vector3& worldPos);
 
 private:
-
     std::unordered_map<godot::Vector2i, Chunk> loadedChunks;
     std::future<void> futureResult;
     std::unique_ptr<DiscreteLandTypeByHeight[]> elevations;
@@ -146,16 +112,17 @@ public:
 
     static godot::Transform3D calculateTileTransform(i32 x, i32 y) {
         const bool oddRow = std::abs(y % 2) == 1;
-        const f32 xPos     = oddRow ? x * tileHorizontalOffset + oddRowHorizontalOffset : x * tileHorizontalOffset;
-        constexpr f32 yPos = 0.0f; // В Godot Y - это вертикаль
-        const f32 zPos     = y * tileVerticalOffset;
+        const f32 xPos = oddRow
+            ? x * tileHorizontalOffset + oddRowHorizontalOffset
+            : x * tileHorizontalOffset;
+        constexpr f32 yPos = 0.0f;
+        const f32 zPos = y * tileVerticalOffset;
 
-        return godot::Transform3D(godot::Basis(), // Единичная матрица (без вращения)
+        return godot::Transform3D(
+            godot::Basis(),
             godot::Vector3(xPos, yPos, zPos)
         );
     }
 };
-
-
 
 #endif //MAPMANAGER_H
