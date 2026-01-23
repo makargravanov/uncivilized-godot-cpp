@@ -177,8 +177,8 @@ SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map)
     auto mapResult = MapResult(
         std::move(heights), std::move(map.ageMap), std::move(map.platesMap), map.width, map.height, map.oceanLevel);
 
-    return SeparatedMapResult(
-        std::move(mapResult), std::move(discrete), map.oceanLevel, thresholdHill, thresholdMountain);
+    return {
+        std::move(mapResult), std::move(discrete), map.oceanLevel, thresholdHill, thresholdMountain};
 }
 SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map, f32 oceanLevelOverride) {
     map.oceanLevel = oceanLevelOverride;

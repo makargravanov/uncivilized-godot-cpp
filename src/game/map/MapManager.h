@@ -64,7 +64,7 @@ struct Chunk {
     Chunk& operator=(const Chunk& other) = delete;
 
     Chunk(Chunk&& other) noexcept
-       : chunkPos(std::move(other.chunkPos)), plainMeshInstance(other.plainMeshInstance),
+       : chunkPos(other.chunkPos), plainMeshInstance(other.plainMeshInstance),
          plainMultiMesh(other.plainMultiMesh), hillMeshInstance(other.hillMeshInstance),
          hillMultiMesh(other.hillMultiMesh), mountainMeshInstance(other.mountainMeshInstance),
          mountainMultiMesh(other.mountainMultiMesh), oceanMeshInstance(other.oceanMeshInstance),
@@ -83,7 +83,7 @@ struct Chunk {
         if (this == &other) {
             return *this;
         }
-        chunkPos             = std::move(other.chunkPos);
+        chunkPos             = other.chunkPos;
         plainMeshInstance    = other.plainMeshInstance;
         plainMultiMesh       = other.plainMultiMesh;
         hillMeshInstance     = other.hillMeshInstance;
