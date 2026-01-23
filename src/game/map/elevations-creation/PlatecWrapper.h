@@ -5,7 +5,7 @@
 #ifndef GODOT_CPP_TEMPLATE_MAPCREATOR_H
 #define GODOT_CPP_TEMPLATE_MAPCREATOR_H
 
-#include "../../../util/declarations.h"
+#include "util/declarations.h"
 #include <future>
 
 struct MapResult {

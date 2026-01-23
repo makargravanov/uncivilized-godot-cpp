@@ -3,10 +3,10 @@
 //
 
 #include "MapCreator.h"
-#include "../game/SystemNexus.h"
+#include "game/SystemNexus.h"
 
-#include "../game/map/elevations-creation/Aligner.h"
-#include "../game/map/elevations-creation/LayerSeparator.h"
+#include "game/map/elevations-creation/Aligner.h"
+#include "game/map/elevations-creation/LayerSeparator.h"
 
 void MapCreator::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_heightmap_callback", "callback"), &MapCreator::set_heightmap_callback);

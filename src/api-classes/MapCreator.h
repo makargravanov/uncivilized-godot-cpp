@@ -4,7 +4,7 @@
 
 #ifndef MAPCREATOR_H
 #define MAPCREATOR_H
-#include "../game/map/elevations-creation/PlatecWrapper.h"
+#include "game/map/elevations-creation/PlatecWrapper.h"
 #include <future>
 
 #include <godot_cpp/classes/ref_counted.hpp>

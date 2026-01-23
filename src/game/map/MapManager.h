@@ -4,14 +4,12 @@
 
 #ifndef MAPMANAGER_H
 #define MAPMANAGER_H
-#include "../../api-classes/PlayScene.h"
-#include "../../util/declarations.h"
+#include "util/declarations.h"
 #include "elevations-creation/LayerSeparator.h"
 #include <future>
 #include <map>
 #include <memory>
 
-#include "godot_cpp/core/print_string.hpp"
 #include "godot_cpp/variant/variant.hpp"
 #include <godot_cpp/classes/mesh.hpp>
 #include <godot_cpp/classes/multi_mesh.hpp>

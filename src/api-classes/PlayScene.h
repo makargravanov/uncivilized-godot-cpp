@@ -5,7 +5,7 @@
 #ifndef PLAYSCENE_H
 #define PLAYSCENE_H
 
-#include "../util/declarations.h"
+#include "util/declarations.h"
 #include <future>
 
 #include <godot_cpp/classes/node.hpp>

@@ -4,6 +4,7 @@
 
 #ifndef SYSTEMNEXUS_H
 #define SYSTEMNEXUS_H
+#include "api-classes/PlayScene.h"
 #include "map/MapManager.h"
 #include "map/elevations-creation/LayerSeparator.h"
 

@@ -10,14 +10,6 @@ projectdir = "script"
 
 localEnv = Environment(tools=["default"], PLATFORM="")
 
-# Build profiles can be used to decrease compile times.
-# You can either specify "disabled_classes", OR
-# explicitly specify "enabled_classes" which disables all other classes.
-# Modify the example file as needed and uncomment the line below or
-# manually specify the build_profile parameter when running SCons.
-
-# localEnv["build_profile"] = "build_profile.json"
-
 customs = ["custom.py"]
 customs = [os.path.abspath(path) for path in customs]
 
@@ -53,11 +45,6 @@ sources.extend(src_5)
 ################################################
 outer_libs_sources = Glob("outer-libs/**/*.cpp")
 sources.extend(outer_libs_sources)
-
-
-
-
-
 
 env.Append(CXXFLAGS=["-fext-numeric-literals"])
 

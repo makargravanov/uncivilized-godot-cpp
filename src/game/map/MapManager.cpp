@@ -3,8 +3,8 @@
 //
 
 #include "MapManager.h"
-#include "../SystemNexus.h"
 #include "elevations-creation/DiscreteLandTypeByHeight.h"
+#include "game/SystemNexus.h"
 
 f32 MapManager::tileHorizontalOffset   = 173.205078 / 100;
 f32 MapManager::oddRowHorizontalOffset = 86.602539 / 100;

@@ -5,7 +5,7 @@
 #include "PlayScene.h"
 #include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 
-#include "../game/SystemNexus.h"
+#include "game/SystemNexus.h"
 void PlayScene::_bind_methods() {
 //    godot::ClassDB::bind_method(godot::D_METHOD("set_player"), &PlayScene::set_player);
 }
