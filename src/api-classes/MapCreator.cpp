@@ -27,7 +27,7 @@ void MapCreator::createInternal() {
 
         auto aligned = Aligner::applyBorders(Aligner::applyAlign(std::move(heights)));
 
-        auto separated = LayerSeparator::initializeOceanAndThresholds(std::move(aligned), 1);
+        auto separated = LayerSeparator::initializeOceanAndThresholdsByGradient(std::move(aligned), 1);
 
         SystemNexus::configureMap(std::move(separated));
 

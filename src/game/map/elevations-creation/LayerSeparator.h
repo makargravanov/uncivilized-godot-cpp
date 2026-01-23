@@ -10,7 +10,7 @@
 enum DiscreteLandTypeByHeight : u8;
 struct MapResult;
 
-constexpr u32 RELIEF_WINDOW_RADIUS = 2;       // 1 → 3×3, 2 → 5×5, 3 → 7×7
+constexpr u32 RELIEF_WINDOW_RADIUS = 1;       // 1 → 3×3, 2 → 5×5, 3 → 7×7
 constexpr f32 HEIGHT_WEIGHT = 0.3f;           // α: вес высоты (1-α → вес relief)
 constexpr f32 HILL_PERCENTILE = 0.90f;
 constexpr f32 MOUNTAIN_PERCENTILE = 0.97f;
@@ -67,6 +67,7 @@ private:
 
     static std::unique_ptr<f32[]> computeReliefMap(
         const std::unique_ptr<f32[]>& heights,
+        const std::unique_ptr<DiscreteLandTypeByHeight[]>& discrete,
         u32 width, u32 height, u32 radius);
 
     static void normalizeMap(f32* map, u32 size);

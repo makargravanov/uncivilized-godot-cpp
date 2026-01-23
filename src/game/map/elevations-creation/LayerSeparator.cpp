@@ -187,27 +187,43 @@ SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map,
 
 
 std::unique_ptr<f32[]> LayerSeparator::computeReliefMap(
-    const std::unique_ptr<f32[]>& heights, const u32 width, const u32 height, const u32 radius) {
+    const std::unique_ptr<f32[]>& heights,
+    const std::unique_ptr<DiscreteLandTypeByHeight[]>& discrete,
+    const u32 width, const u32 height, const u32 radius)
+{
     auto relief = std::make_unique<f32[]>(width * height);
     const i32 r = static_cast<i32>(radius);
 
     for (u32 y = 0; y < height; ++y) {
         for (u32 x = 0; x < width; ++x) {
+            const u32 idx = y * width + x;
+
+            if (discrete[idx] == OCEAN || discrete[idx] == VALLEY) {
+                relief[idx] = 0.0f;
+                continue;
+            }
+
             f32 minH = std::numeric_limits<f32>::max();
             f32 maxH = std::numeric_limits<f32>::lowest();
+            bool hasLandNeighbor = false;
 
             for (i32 dy = -r; dy <= r; ++dy) {
                 for (i32 dx = -r; dx <= r; ++dx) {
                     i32 nx = std::clamp(static_cast<i32>(x) + dx, 0, static_cast<i32>(width - 1));
                     i32 ny = std::clamp(static_cast<i32>(y) + dy, 0, static_cast<i32>(height - 1));
+                    u32 nidx = ny * width + nx;
 
-                    f32 h = heights[ny * width + nx];
-                    minH  = std::min(minH, h);
-                    maxH  = std::max(maxH, h);
+                    //только суша
+                    if (discrete[nidx] != OCEAN && discrete[nidx] != VALLEY) {
+                        f32 h = heights[nidx];
+                        minH = std::min(minH, h);
+                        maxH = std::max(maxH, h);
+                        hasLandNeighbor = true;
+                    }
                 }
             }
 
-            relief[y * width + x] = maxH - minH;
+            relief[idx] = hasLandNeighbor ? (maxH - minH) : 0.0f;
         }
     }
 
@@ -240,8 +256,7 @@ SeparatedMapResult LayerSeparator::initializeOceanAndThresholdsByGradient(MapRes
 
     fillOceanOrValleyOrPlain(heights, discrete, width, height, map.oceanLevel);
 
-    auto reliefMap = computeReliefMap(heights, width, height, RELIEF_WINDOW_RADIUS);
-
+    auto reliefMap = computeReliefMap(heights, discrete, width, height, RELIEF_WINDOW_RADIUS);
     auto normHeight = std::make_unique<f32[]>(size);
     auto normRelief = std::make_unique<f32[]>(size);
 
