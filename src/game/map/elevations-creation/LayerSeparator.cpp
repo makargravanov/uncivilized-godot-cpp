@@ -17,21 +17,21 @@ f32 quantile(std::vector<f32>& data, const f32 landPercentage) {
     const f32 index    = landPercentage * (data.size() - 1);
     const f32 lower    = std::floor(index);
     const f32 fraction = index - lower;
-    return data[lower] + fraction * (data[lower+1] - data[lower]);
+    return data[lower] + fraction * (data[lower + 1] - data[lower]);
 }
 
-f32 LayerSeparator::findThreshold(           // от 0.0 до 1.0
+f32 LayerSeparator::findThreshold( // от 0.0 до 1.0
     const std::unique_ptr<f32[]>& heightMap, const f32 landPercentage, const u32 width, const u32 height) {
 
-    auto vec = std::vector<f32>(width*height);
-    for (int i = 0; i < width*height; ++i) {
+    auto vec = std::vector<f32>(width * height);
+    for (int i = 0; i < width * height; ++i) {
         vec[i] = heightMap[i];
     }
     return quantile(vec, landPercentage);
 }
 
-void LayerSeparator::fillOceanOrValleyOrPlain(const std::unique_ptr<f32[]>& heights, std::unique_ptr<DiscreteLandTypeByHeight[]>& discrete,
-    const u32 width, const u32 height, const f32 oceanLevel) {
+void LayerSeparator::fillOceanOrValleyOrPlain(const std::unique_ptr<f32[]>& heights,
+    std::unique_ptr<DiscreteLandTypeByHeight[]>& discrete, const u32 width, const u32 height, const f32 oceanLevel) {
 
     for (u32 i = 0; i < width * height; ++i) {
         discrete[i] = PLAIN;
@@ -89,8 +89,7 @@ void LayerSeparator::fillOceanOrValleyOrPlain(const std::unique_ptr<f32[]>& heig
         }
     }
 }
-SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map)
-{
+SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map) {
     // 1. Переносим данные из входного map
     auto heights  = std::move(map.heights);
     auto discrete = std::make_unique<DiscreteLandTypeByHeight[]>(map.height * map.width);
@@ -104,16 +103,11 @@ SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map)
 
     // 4. Базовая классификация по высоте (только равнины → холмы / горы)
     u32 size = map.width * map.height;
-    for (u32 i = 0; i < size; ++i)
-    {
-        if (discrete[i] == PLAIN)
-        {
-            if (heights[i] >= thresholdHill && heights[i] < thresholdMountain)
-            {
+    for (u32 i = 0; i < size; ++i) {
+        if (discrete[i] == PLAIN) {
+            if (heights[i] >= thresholdHill && heights[i] < thresholdMountain) {
                 discrete[i] = HILL;
-            }
-            else if (heights[i] >= thresholdMountain)
-            {
+            } else if (heights[i] >= thresholdMountain) {
                 discrete[i] = MOUNTAIN;
             }
         }
@@ -127,11 +121,11 @@ SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map)
     noise.instantiate();
 
     // Настройки шума — подбирай под свою карту
-    noise->set_seed(23);                               // можно брать из Platec seed
-    noise->set_noise_type(godot::FastNoiseLite::TYPE_SIMPLEX_SMOOTH);  // или TYPE_SIMPLEX
-    noise->set_frequency(0.1f);                      // 0.02 – 0.08 обычно хорошо для 400×250, чем выше тем мельче пятна
+    noise->set_seed(23); // можно брать из Platec seed
+    noise->set_noise_type(godot::FastNoiseLite::TYPE_SIMPLEX_SMOOTH); // или TYPE_SIMPLEX
+    noise->set_frequency(0.1f); // 0.02 – 0.08 обычно хорошо для 400×250, чем выше тем мельче пятна
     noise->set_fractal_type(godot::FastNoiseLite::FRACTAL_FBM);
-    noise->set_fractal_octaves(10);                     // 4–6 обычно достаточно
+    noise->set_fractal_octaves(10); // 4–6 обычно достаточно
     noise->set_fractal_gain(0.5f);
     noise->set_fractal_lacunarity(2.6f);
 
@@ -141,18 +135,16 @@ SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map)
      */
 
     noise->set_domain_warp_enabled(true);
-    noise->set_domain_warp_type(godot::FastNoiseLite::DOMAIN_WARP_SIMPLEX);  // самый популярный и красивый
+    noise->set_domain_warp_type(godot::FastNoiseLite::DOMAIN_WARP_SIMPLEX); // самый популярный и красивый
     noise->set_domain_warp_amplitude(30.0f); // сила искажения — от 10 до 100 обычно
 
     // Пороги для понижения типа (шум в диапазоне [-1, +1])
-    constexpr float NOISE_THRESHOLD_MOUNTAIN_TO_HILL = 0.15f;   // чем ниже — тем больше гор → холмы
-    constexpr float NOISE_THRESHOLD_HILL_TO_PLAIN    = 0.75f;   // чем ниже — тем больше холмов → равнины
+    constexpr float NOISE_THRESHOLD_MOUNTAIN_TO_HILL = 0.15f; // чем ниже — тем больше гор → холмы
+    constexpr float NOISE_THRESHOLD_HILL_TO_PLAIN    = 0.75f; // чем ниже — тем больше холмов → равнины
 
     // Применяем шум только к холмам и горам
-    for (u32 y = 0; y < map.height; ++y)
-    {
-        for (u32 x = 0; x < map.width; ++x)
-        {
+    for (u32 y = 0; y < map.height; ++y) {
+        for (u32 x = 0; x < map.width; ++x) {
             u32 idx = y * map.width + x;
 
             // Получаем значение шума в точке
@@ -161,52 +153,166 @@ SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map)
             // Можно дополнительно умножить на амплитуду или добавить offset
             // n = n * 0.8f + 0.1f;  // пример смещения, если нужно
 
-            switch (discrete[idx])
-            {
-                case MOUNTAIN:
-                    if (n > NOISE_THRESHOLD_MOUNTAIN_TO_HILL)
-                    {
-                        discrete[idx] = HILL;
-                    }
-                    break;
+            switch (discrete[idx]) {
+            case MOUNTAIN:
+                if (n > NOISE_THRESHOLD_MOUNTAIN_TO_HILL) {
+                    discrete[idx] = HILL;
+                }
+                break;
 
-                case HILL:
-                    if (n > NOISE_THRESHOLD_HILL_TO_PLAIN)
-                    {
-                        discrete[idx] = PLAIN;
-                    }
-                    break;
+            case HILL:
+                if (n > NOISE_THRESHOLD_HILL_TO_PLAIN) {
+                    discrete[idx] = PLAIN;
+                }
+                break;
 
-                default:
-                    // Океан, равнина и т.д. не трогаем
-                    break;
+            default:
+                // Океан, равнина и т.д. не трогаем
+                break;
             }
         }
     }
 
     // 6. Собираем результат
     auto mapResult = MapResult(
-        std::move(heights),
-        std::move(map.ageMap),
-        std::move(map.platesMap),
-        map.width,
-        map.height,
-        map.oceanLevel
-    );
+        std::move(heights), std::move(map.ageMap), std::move(map.platesMap), map.width, map.height, map.oceanLevel);
 
     return SeparatedMapResult(
-        std::move(mapResult),
-        std::move(discrete),
-        map.oceanLevel,
-        thresholdHill,
-        thresholdMountain
-    );
+        std::move(mapResult), std::move(discrete), map.oceanLevel, thresholdHill, thresholdMountain);
 }
 SeparatedMapResult LayerSeparator::initializeOceanAndThresholds(MapResult&& map, f32 oceanLevelOverride) {
     map.oceanLevel = oceanLevelOverride;
     return initializeOceanAndThresholds(std::move(map));
 }
 
-//TODO:
-// - Организовать выравнивание высот относительно уровня океана
-// - Отдельно сохранять рельеф дна
+
+std::unique_ptr<f32[]> LayerSeparator::computeReliefMap(
+    const std::unique_ptr<f32[]>& heights, const u32 width, const u32 height, const u32 radius) {
+    auto relief = std::make_unique<f32[]>(width * height);
+    const i32 r = static_cast<i32>(radius);
+
+    for (u32 y = 0; y < height; ++y) {
+        for (u32 x = 0; x < width; ++x) {
+            f32 minH = std::numeric_limits<f32>::max();
+            f32 maxH = std::numeric_limits<f32>::lowest();
+
+            for (i32 dy = -r; dy <= r; ++dy) {
+                for (i32 dx = -r; dx <= r; ++dx) {
+                    i32 nx = std::clamp(static_cast<i32>(x) + dx, 0, static_cast<i32>(width - 1));
+                    i32 ny = std::clamp(static_cast<i32>(y) + dy, 0, static_cast<i32>(height - 1));
+
+                    f32 h = heights[ny * width + nx];
+                    minH  = std::min(minH, h);
+                    maxH  = std::max(maxH, h);
+                }
+            }
+
+            relief[y * width + x] = maxH - minH;
+        }
+    }
+
+    return relief;
+}
+
+void LayerSeparator::normalizeMap(f32* map, const u32 size) {
+    f32 minVal = std::numeric_limits<f32>::max();
+    f32 maxVal = std::numeric_limits<f32>::lowest();
+
+    for (u32 i = 0; i < size; ++i) {
+        minVal = std::min(minVal, map[i]);
+        maxVal = std::max(maxVal, map[i]);
+    }
+
+    const f32 range = (maxVal - minVal > 1e-6f) ? (maxVal - minVal) : 1.0f;
+
+    for (u32 i = 0; i < size; ++i) {
+        map[i] = (map[i] - minVal) / range;
+    }
+}
+
+SeparatedMapResult LayerSeparator::initializeOceanAndThresholdsByGradient(MapResult&& map) {
+    const u32 width  = map.width;
+    const u32 height = map.height;
+    const u32 size   = width * height;
+
+    auto heights  = std::move(map.heights);
+    auto discrete = std::make_unique<DiscreteLandTypeByHeight[]>(size);
+
+    fillOceanOrValleyOrPlain(heights, discrete, width, height, map.oceanLevel);
+
+    auto reliefMap = computeReliefMap(heights, width, height, RELIEF_WINDOW_RADIUS);
+
+    auto normHeight = std::make_unique<f32[]>(size);
+    auto normRelief = std::make_unique<f32[]>(size);
+
+    for (u32 i = 0; i < size; ++i) {
+        normHeight[i] = heights[i];
+        normRelief[i] = reliefMap[i];
+    }
+
+    normalizeMap(normHeight.get(), size);
+    normalizeMap(normRelief.get(), size);
+
+    auto score = std::make_unique<f32[]>(size);
+    std::vector<f32> landScores;
+    landScores.reserve(size / 2);
+
+    for (u32 i = 0; i < size; ++i) {
+        if (discrete[i] == PLAIN) {
+            score[i] = HEIGHT_WEIGHT * normHeight[i] + (1.0f - HEIGHT_WEIGHT) * normRelief[i];
+            landScores.push_back(score[i]);
+        } else {
+            score[i] = 0.0f;
+        }
+    }
+
+    f32 thresholdHill     = 0.0f;
+    f32 thresholdMountain = 0.0f;
+
+    if (!landScores.empty()) {
+        std::sort(landScores.begin(), landScores.end());
+
+        auto getPercentile = [&](f32 p) -> f32 {
+            f32 idx  = p * static_cast<f32>(landScores.size() - 1);
+            u32 lo   = static_cast<u32>(std::floor(idx));
+            f32 frac = idx - static_cast<f32>(lo);
+            if (lo + 1 < landScores.size()) {
+                return landScores[lo] + frac * (landScores[lo + 1] - landScores[lo]);
+            }
+            return landScores[lo];
+        };
+
+        thresholdHill     = getPercentile(HILL_PERCENTILE);
+        thresholdMountain = getPercentile(MOUNTAIN_PERCENTILE);
+    }
+
+    for (u32 i = 0; i < size; ++i) {
+        if (discrete[i] != PLAIN) {
+            continue;
+        }
+
+        if (score[i] >= thresholdMountain) {
+            if (normRelief[i] < PLATEAU_RELIEF_THRESHOLD) {
+                discrete[i] = PLAIN; // TODO: плато сделать возможно?
+            } else {
+                discrete[i] = MOUNTAIN;
+            }
+        } else if (score[i] >= thresholdHill) {
+            discrete[i] = HILL;
+        }
+    }
+
+    auto mapResult =
+        MapResult(std::move(heights), std::move(map.ageMap), std::move(map.platesMap), width, height, map.oceanLevel);
+
+    return {std::move(mapResult), std::move(discrete), map.oceanLevel, thresholdHill, thresholdMountain};
+}
+
+SeparatedMapResult LayerSeparator::initializeOceanAndThresholdsByGradient(MapResult&& map, f32 oceanLevelOverride) {
+    map.oceanLevel = oceanLevelOverride;
+    return initializeOceanAndThresholdsByGradient(std::move(map));
+}
+
+// TODO:
+//  - Организовать выравнивание высот относительно уровня океана
+//  - Отдельно сохранять рельеф дна
