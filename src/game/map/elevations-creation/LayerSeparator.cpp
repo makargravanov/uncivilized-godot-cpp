@@ -204,22 +204,30 @@ std::unique_ptr<f32[]> LayerSeparator::computeReliefMap(
             }
 
             f32 minH = std::numeric_limits<f32>::max();
+            bool hasValidNeighbor = false;
 
             for (i32 dy = -r; dy <= r; ++dy) {
                 for (i32 dx = -r; dx <= r; ++dx) {
                     if (dx == 0 && dy == 0) continue;
 
-                    i32 nx = std::clamp(static_cast<i32>(x) + dx, 0, static_cast<i32>(width - 1));
-                    i32 ny = std::clamp(static_cast<i32>(y) + dy, 0, static_cast<i32>(height - 1));
+                    u32 nx = wrapX(static_cast<i32>(x) + dx, width);
+                    i32 nyRaw = static_cast<i32>(y) + dy;
+
+                    if (nyRaw < 0 || nyRaw >= static_cast<i32>(height)) {
+                        continue;
+                    }
+                    u32 ny = static_cast<u32>(nyRaw);
+
                     u32 nidx = ny * width + nx;
 
                     if (discrete[nidx] != OCEAN && discrete[nidx] != VALLEY) {
                         minH = std::min(minH, heights[nidx]);
+                        hasValidNeighbor = true;
                     }
                 }
             }
 
-            if (minH < std::numeric_limits<f32>::max()) {
+            if (hasValidNeighbor) {
                 prominence[idx] = std::max(0.0f, heights[idx] - minH);
             } else {
                 prominence[idx] = 0.0f;

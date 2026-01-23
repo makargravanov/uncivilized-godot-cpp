@@ -5,6 +5,7 @@
 #ifndef LAYERSEPARATOR_H
 #define LAYERSEPARATOR_H
 #include "PlatecWrapper.h"
+#include <algorithm>
 
 
 enum DiscreteLandTypeByHeight : u8;
@@ -57,6 +58,14 @@ public:
 
     static SeparatedMapResult initializeOceanAndThresholdsByGradient(MapResult&& map);
     static SeparatedMapResult initializeOceanAndThresholdsByGradient(MapResult&& map, f32 oceanLevelOverride);
+
+    __forceinline static constexpr u32 wrapX(const i32 x, const u32 width) {
+        const i32 w = static_cast<i32>(width);
+        return static_cast<u32>((x % w + w) % w);
+    }
+    __forceinline static constexpr i32 clampY(const i32 y, const u32 height) {
+        return std::clamp(y, 0, static_cast<i32>(height - 1));
+    }
 private:
     static f32 findThreshold(
         const std::unique_ptr<f32[]>& heightMap, f32 landPercentage,
