@@ -11,10 +11,10 @@
 enum DiscreteLandTypeByHeight : u8;
 struct MapResult;
 
-constexpr u32 RELIEF_WINDOW_RADIUS = 1;       // 1 → 3×3, 2 → 5×5, 3 → 7×7
+constexpr u32 RELIEF_WINDOW_RADIUS = 2;       // 1 → 3×3, 2 → 5×5, 3 → 7×7
 constexpr f32 HEIGHT_WEIGHT = 0.3f;           // α: вес высоты (1-α → вес relief)
-constexpr f32 HILL_PERCENTILE = 0.90f;
-constexpr f32 MOUNTAIN_PERCENTILE = 0.97f;
+constexpr f32 HILL_PERCENTILE = 0.80f;
+constexpr f32 MOUNTAIN_PERCENTILE = 0.96f;
 constexpr f32 PLATEAU_RELIEF_THRESHOLD = 0.15f;  // ниже этого relief → плато
 
 struct SeparatedMapResult {

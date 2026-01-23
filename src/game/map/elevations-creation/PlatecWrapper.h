@@ -51,7 +51,7 @@ struct MapResult {
 };
 
 struct MapArgs {
-    u64 seed     = 23;
+    u64 seed     = 448;
     u32 width    = 448;//7*64
     u32 height   = 256;//4*64
     f32 seaLevel = 0.65;
