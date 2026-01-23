@@ -191,7 +191,7 @@ std::unique_ptr<f32[]> LayerSeparator::computeReliefMap(
     const std::unique_ptr<DiscreteLandTypeByHeight[]>& discrete,
     const u32 width, const u32 height, const u32 radius)
 {
-    auto relief = std::make_unique<f32[]>(width * height);
+    auto prominence = std::make_unique<f32[]>(width * height);
     const i32 r = static_cast<i32>(radius);
 
     for (u32 y = 0; y < height; ++y) {
@@ -199,35 +199,35 @@ std::unique_ptr<f32[]> LayerSeparator::computeReliefMap(
             const u32 idx = y * width + x;
 
             if (discrete[idx] == OCEAN || discrete[idx] == VALLEY) {
-                relief[idx] = 0.0f;
+                prominence[idx] = 0.0f;
                 continue;
             }
 
             f32 minH = std::numeric_limits<f32>::max();
-            f32 maxH = std::numeric_limits<f32>::lowest();
-            bool hasLandNeighbor = false;
 
             for (i32 dy = -r; dy <= r; ++dy) {
                 for (i32 dx = -r; dx <= r; ++dx) {
+                    if (dx == 0 && dy == 0) continue;
+
                     i32 nx = std::clamp(static_cast<i32>(x) + dx, 0, static_cast<i32>(width - 1));
                     i32 ny = std::clamp(static_cast<i32>(y) + dy, 0, static_cast<i32>(height - 1));
                     u32 nidx = ny * width + nx;
 
-                    //только суша
                     if (discrete[nidx] != OCEAN && discrete[nidx] != VALLEY) {
-                        f32 h = heights[nidx];
-                        minH = std::min(minH, h);
-                        maxH = std::max(maxH, h);
-                        hasLandNeighbor = true;
+                        minH = std::min(minH, heights[nidx]);
                     }
                 }
             }
 
-            relief[idx] = hasLandNeighbor ? (maxH - minH) : 0.0f;
+            if (minH < std::numeric_limits<f32>::max()) {
+                prominence[idx] = std::max(0.0f, heights[idx] - minH);
+            } else {
+                prominence[idx] = 0.0f;
+            }
         }
     }
 
-    return relief;
+    return prominence;
 }
 
 void LayerSeparator::normalizeMap(f32* map, const u32 size) {
