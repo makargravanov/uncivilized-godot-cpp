@@ -55,14 +55,15 @@ MapResult Aligner::applyAlign(MapResult&& map) noexcept {
         }
     }
 
-    return MapResult(
+    return {
+        map.seed,
         std::move(newHeights),
         std::move(newAgeMap),
         std::move(newPlatesMap),
         width,
         height,
         map.oceanLevel
-    );
+    };
 }
 
 MapResult Aligner::applyBorders(MapResult&& map) noexcept {
@@ -80,12 +81,13 @@ MapResult Aligner::applyBorders(MapResult&& map) noexcept {
         }
     }
 
-    return MapResult(
+    return{
+        map.seed,
         std::move(heights),
         std::move(map.ageMap),
         std::move(map.platesMap),
         map.width,
         map.height,
         map.oceanLevel
-    );
+    };
 }

@@ -10,7 +10,6 @@
 #include <queue>
 
 #include "godot_cpp/classes/fast_noise_lite.hpp"
-#include "godot_cpp/classes/ref.hpp"
 
 f32 quantile(std::vector<f32>& data, const f32 landPercentage) {
     std::sort(data.begin(), data.end());
@@ -230,7 +229,7 @@ SeparatedMapResult LayerSeparator::initializeOceanAndThresholdsByGradient(MapRes
     }
 
     auto mapResult =
-        MapResult(std::move(heights), std::move(map.ageMap), std::move(map.platesMap), width, height, map.oceanLevel);
+        MapResult(map.seed, std::move(heights), std::move(map.ageMap), std::move(map.platesMap), width, height, map.oceanLevel);
 
     return {std::move(mapResult), std::move(discrete), map.oceanLevel, thresholdHill, thresholdMountain};
 }

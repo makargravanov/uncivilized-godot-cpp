@@ -9,6 +9,7 @@
 #include <future>
 
 struct MapResult {
+    u64 seed = 0;
     std::unique_ptr<f32[]> heights;
     std::unique_ptr<u32[]> ageMap;
     std::unique_ptr<u16[]> platesMap;
@@ -16,8 +17,9 @@ struct MapResult {
     u32 height = 0;
     f32 oceanLevel = 0;
 
-    MapResult(std::unique_ptr<f32[]> heights, std::unique_ptr<u32[]> ageMap,std::unique_ptr<u16[]> platesMap, u32 width, u32 height, f32 oceanLevel)
-        : heights(std::move(heights)),
+    MapResult(u64 seed, std::unique_ptr<f32[]> heights, std::unique_ptr<u32[]> ageMap,std::unique_ptr<u16[]> platesMap, u32 width, u32 height, f32 oceanLevel)
+        : seed(seed),
+          heights(std::move(heights)),
           ageMap(std::move(ageMap)),
           platesMap(std::move(platesMap)),
           width(width),

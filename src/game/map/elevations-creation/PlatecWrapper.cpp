@@ -54,12 +54,13 @@ MapResult PlatecWrapper::createHeights(const MapArgs& args, const ProgressCallba
     std::memcpy(platesMapCopy.get(), platesMap, numElements * sizeof(u16));
 
     platec_api_destroy(api);
-    return MapResult(
+    return {
+        args.seed,
         std::move(heightsCopy),
         std::move(ageMapCopy),
         std::move(platesMapCopy),
         args.width,
         args.height,
         args.seaLevel
-    );
+    };
 }
