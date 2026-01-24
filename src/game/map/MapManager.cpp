@@ -15,12 +15,12 @@ u8  MapManager::renderDistance         = 4;
 
 void LandTypeMeshData::create() {
     instance = GodotPtr(memnew(godot::MultiMeshInstance3D));
-    multiMesh = GodotPtr(memnew(godot::MultiMesh));
-    instance->set_multimesh(multiMesh.get());
+    multiMesh.instantiate();
+    instance->set_multimesh(multiMesh);
 }
 
 bool LandTypeMeshData::initialize(i32 instanceCount, const char* meshPath) const {
-    if (!multiMesh || !instance) {
+    if (!multiMesh.is_valid() || !instance) {
         return false;
     }
 

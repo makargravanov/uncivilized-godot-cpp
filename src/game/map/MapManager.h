@@ -35,7 +35,7 @@ struct std::hash<godot::Vector2i> {
 
 struct LandTypeMeshData {
     GodotPtr<godot::MultiMeshInstance3D> instance;
-    GodotPtr<godot::MultiMesh> multiMesh;
+    godot::Ref<godot::MultiMesh> multiMesh;
 
     LandTypeMeshData() = default;
 
@@ -51,7 +51,7 @@ struct LandTypeMeshData {
     void removeFromScene() const;
 
     void setInstanceTransform(i32 index, const godot::Transform3D& transform) const {
-        if (multiMesh) {
+        if (multiMesh.is_valid()) {
             multiMesh->set_instance_transform(index, transform);
         }
     }
