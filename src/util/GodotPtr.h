@@ -55,10 +55,6 @@ public:
         ptr = p;
     }
 
-    template<typename... Args>
-    static GodotPtr make(Args&&... args) {
-        return GodotPtr(memnew(T(std::forward<Args>(args)...)));
-    }
 
 private:
     T* ptr;

@@ -14,8 +14,8 @@ u8  MapManager::renderDistance         = 4;
 
 
 void LandTypeMeshData::create() {
-    instance = GodotPtr<godot::MultiMeshInstance3D>::make();
-    multiMesh = GodotPtr<godot::MultiMesh>::make();
+    instance = GodotPtr(memnew(godot::MultiMeshInstance3D));
+    multiMesh = GodotPtr(memnew(godot::MultiMesh));
     instance->set_multimesh(multiMesh.get());
 }
 
