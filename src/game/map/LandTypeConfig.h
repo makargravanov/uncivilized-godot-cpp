@@ -16,8 +16,8 @@ struct LandTypeConfig {
 inline constexpr LandTypeConfig LAND_TYPE_CONFIGS[] = {
     {OCEAN,          "res://ocean_hexagon_mesh.tres"},
     {SHALLOW_OCEAN,  "res://shallow_ocean_hexagon_mesh.tres"},
-    {VALLEY,         "res://valley_hexagon_mesh.tres"},
-    {SHALLOW_VALLEY, "res://shallow_valley_hexagon_mesh.tres"},
+    {VALLEY,         "res://ocean_hexagon_mesh.tres"},
+    {SHALLOW_VALLEY, "res://shallow_ocean_hexagon_mesh.tres"},
     {PLAIN,          "res://hexagon_mesh.tres"},
     {HILL,           "res://hill_hexagon_mesh.tres"},
     {MOUNTAIN,       "res://mountain_hexagon_mesh.tres"},

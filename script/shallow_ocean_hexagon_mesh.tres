@@ -1,0 +1,36 @@
+[gd_resource type="ArrayMesh" load_steps=3 format=4 uid="uid://bieabi8re4ypb"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sk8jl"]
+albedo_color = Color(0.11731, 0.439055, 0.496502, 1)
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_hvsky"]
+_surfaces = [{
+"aabb": AABB(-0.866025, 0, -1, 1.73205, 1e-05, 2),
+"format": 34896613377,
+"index_count": 18,
+"index_data": PackedByteArray("BgACAAAABgABAAIABgAAAAUABgADAAEABgAFAAQABgAEAAMA"),
+"lods": [1e-10, PackedByteArray("AAABAAIAAAADAAEAAAAEAAMAAAAFAAQA")],
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 7,
+"vertex_data": PackedByteArray("/38AAAAAAAAAAAAA/78AAAAAAAD/PwAA/38AAP//AAD//wAA/78AAP//AAD/PwAA/38AAP9/AAA=")
+}]
+blend_shape_mode = 0
+
+[resource]
+resource_name = "hexagon_mesh_Circle"
+_surfaces = [{
+"aabb": AABB(-0.866025, 0, -1, 1.73205, 1e-05, 2),
+"attribute_data": PackedByteArray("/38AACYR/78mEf8//3///9ju/7/Y7v8//3//fw=="),
+"format": 34896613399,
+"index_count": 18,
+"index_data": PackedByteArray("BgACAAAABgABAAIABgAAAAUABgADAAEABgAFAAQABgAEAAMA"),
+"lods": [1e-10, PackedByteArray("AAABAAIAAAADAAEAAAAEAAMAAAAFAAQA")],
+"material": SubResource("StandardMaterial3D_sk8jl"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 7,
+"vertex_data": PackedByteArray("/38AAAAA/78AAAAA/7//vwAAAAD/P/+//38AAP///7///wAA/7//v///AAD/P/+//38AAP9//7////9/////f////3////9/////f////3////9/")
+}]
+blend_shape_mode = 0
+shadow_mesh = SubResource("ArrayMesh_hvsky")
