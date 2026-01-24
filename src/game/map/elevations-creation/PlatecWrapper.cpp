@@ -18,7 +18,7 @@ MapResult PlatecWrapper::createHeights(const MapArgs& args, const ProgressCallba
                 args.aggrOverlapAbs, args.aggrOverlapRel, args.cycleCount, args.numPlates);
 
     if (!api) {
-        return MapResult();
+        return {};
     }
 
     u8 counter = 0;
