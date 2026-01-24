@@ -53,9 +53,6 @@ struct SeparatedMapResult {
 
 class LayerSeparator {
 public:
-    static SeparatedMapResult initializeOceanAndThresholds(MapResult&& map);
-    static SeparatedMapResult initializeOceanAndThresholds(MapResult&& map, f32 oceanLevelOverride);
-
     static SeparatedMapResult initializeOceanAndThresholdsByGradient(MapResult&& map);
     static SeparatedMapResult initializeOceanAndThresholdsByGradient(MapResult&& map, f32 oceanLevelOverride);
 
