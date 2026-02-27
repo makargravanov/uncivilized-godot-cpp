@@ -17,8 +17,8 @@ constexpr f32 HILL_PERCENTILE = 0.80f;
 constexpr f32 MOUNTAIN_PERCENTILE = 0.96f;
 constexpr f32 PLATEAU_RELIEF_THRESHOLD = 0.15f;  // ниже этого relief → плато
 
-constexpr f32 COASTAL_BASE_DISTANCE = 4.0f;      // базовая ширина прибрежья в клетках
-constexpr f32 COASTAL_VARIATION = 1.5f;          // +- вариация (итого ~2.5 - 5.5 клеток)
+constexpr f32 COASTAL_BASE_DISTANCE = 3.0f;      // базовая ширина прибрежья в клетках
+constexpr f32 COASTAL_VARIATION = 2.5f;          // +- вариация
 constexpr f32 COASTAL_NOISE_SCALE = 0.05f;       // масштаб шума (меньше = плавнее границы)
 constexpr f32 SHALLOW_OCEAN_PERCENTILE = 0.05f;  // 5% океана по высоте → мелководье
 

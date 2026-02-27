@@ -13,6 +13,8 @@ f32 MapManager::tileVerticalOffset     = 150.0 / 100;
 u8  MapManager::renderDistance         = 4;
 
 
+godot::Ref<godot::Resource> LandTypeMeshData::sharedBiomeMaterial;
+
 void LandTypeMeshData::create() {
     instance = GodotPtr(memnew(godot::MultiMeshInstance3D));
     multiMesh.instantiate();
@@ -24,7 +26,7 @@ bool LandTypeMeshData::initialize(i32 instanceCount, const char* meshPath) const
         return false;
     }
 
-    multiMesh->set_use_colors(true);
+    multiMesh->set_use_custom_data(true);
     multiMesh->set_transform_format(godot::MultiMesh::TRANSFORM_3D);
     multiMesh->set_instance_count(instanceCount);
 
@@ -33,11 +35,21 @@ bool LandTypeMeshData::initialize(i32 instanceCount, const char* meshPath) const
 
     if (meshRes.is_valid()) {
         multiMesh->set_mesh(meshRes);
-        return true;
     } else {
         godot::print_line("Failed to load mesh: ", meshPath);
         return false;
     }
+
+    // Shared biome ShaderMaterial — loaded once, applied to every MultiMeshInstance3D
+    if (sharedBiomeMaterial.is_null()) {
+        sharedBiomeMaterial = godot::ResourceLoader::get_singleton()->load(
+            "res://shaders/tile_biome_material.tres");
+    }
+    if (sharedBiomeMaterial.is_valid()) {
+        instance->set_material_override(sharedBiomeMaterial);
+    }
+
+    return true;
 }
 
 void LandTypeMeshData::addToScene() const {
@@ -60,7 +72,7 @@ Chunk::~Chunk() {
 
 void Chunk::initialize(
     const godot::Vector3& position,
-    const std::map<DiscreteLandTypeByHeight, i32>& typeCounts
+    const std::map<ReliefType, i32>& typeCounts
 ) {
     chunkPos = position;
 
@@ -89,7 +101,11 @@ void MapManager::unloadChunk(godot::Vector2i chunkPos) {
 }
 
 void MapManager::loadChunk(godot::Vector2i vec) {
-    std::map<DiscreteLandTypeByHeight, std::vector<godot::Transform3D>> tilesByType;
+    struct InstanceData {
+        godot::Transform3D transform;
+        f32 biomeId;
+    };
+    std::map<ReliefType, std::vector<InstanceData>> tilesByRelief;
 
     godot::print_line("Loading chunk at: ", vec.x, ", ", vec.y);
 
@@ -101,27 +117,30 @@ void MapManager::loadChunk(godot::Vector2i vec) {
             if (globalX >= 0 && globalX < gridWidth &&
                 globalY >= 0 && globalY < gridHeight) {
 
-                const auto type = elevations[globalY * gridWidth + globalX];
+                const auto& tile = tiles[globalY * gridWidth + globalX];
                 godot::Transform3D tileTransform = calculateTileTransform(globalX, globalY);
 
-                tilesByType[type].push_back(tileTransform);
+                tilesByRelief[tile.relief].push_back(
+                    {tileTransform, static_cast<f32>(tile.biome)});
             }
         }
     }
 
-    std::map<DiscreteLandTypeByHeight, i32> typeCounts;
-    for (const auto& [type, transforms] : tilesByType) {
-        typeCounts[type] = static_cast<i32>(transforms.size());
-        godot::print_line("Type ", static_cast<int>(type), ": ", transforms.size(), " tiles");
+    std::map<ReliefType, i32> typeCounts;
+    for (const auto& [relief, instances] : tilesByRelief) {
+        typeCounts[relief] = static_cast<i32>(instances.size());
+        godot::print_line("Relief ", static_cast<int>(relief), ": ", instances.size(), " tiles");
     }
 
     Chunk newChunk;
     newChunk.initialize(godot::Vector3(vec.x, 0, vec.y), typeCounts);
 
-    for (const auto& [type, transforms] : tilesByType) {
-        if (auto it = newChunk.meshes.find(type); it != newChunk.meshes.end()) {
-            for (i32 i = 0; i < static_cast<i32>(transforms.size()); ++i) {
-                it->second.setInstanceTransform(i, transforms[i]);
+    for (const auto& [relief, instances] : tilesByRelief) {
+        if (auto it = newChunk.meshes.find(relief); it != newChunk.meshes.end()) {
+            for (i32 i = 0; i < static_cast<i32>(instances.size()); ++i) {
+                it->second.setInstanceTransform(i, instances[i].transform);
+                it->second.setInstanceCustomData(i,
+                    godot::Color(instances[i].biomeId, 0.0f, 0.0f, 0.0f));
             }
         }
     }

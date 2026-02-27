@@ -8,8 +8,7 @@
 
 #include "util/declarations.h"
 #include "util/GodotPtr.h"
-#include "elevations-creation/LayerSeparator.h"
-#include "elevations-creation/DiscreteLandTypeByHeight.h"
+#include "TileData.h"
 #include "game/map/LandTypeConfig.h"
 
 #include <future>
@@ -19,6 +18,7 @@
 
 #include "godot_cpp/variant/variant.hpp"
 #include <godot_cpp/classes/mesh.hpp>
+#include <godot_cpp/classes/material.hpp>
 #include <godot_cpp/classes/multi_mesh.hpp>
 #include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
@@ -34,6 +34,8 @@ struct std::hash<godot::Vector2i> {
 };
 
 struct LandTypeMeshData {
+    static godot::Ref<godot::Resource> sharedBiomeMaterial;
+
     GodotPtr<godot::MultiMeshInstance3D> instance;
     godot::Ref<godot::MultiMesh> multiMesh;
 
@@ -55,11 +57,17 @@ struct LandTypeMeshData {
             multiMesh->set_instance_transform(index, transform);
         }
     }
+
+    void setInstanceCustomData(i32 index, const godot::Color& data) const {
+        if (multiMesh.is_valid()) {
+            multiMesh->set_instance_custom_data(index, data);
+        }
+    }
 };
 
 struct Chunk {
     godot::Vector3 chunkPos;
-    std::map<DiscreteLandTypeByHeight, LandTypeMeshData> meshes;
+    std::map<ReliefType, LandTypeMeshData> meshes;
 
     Chunk() = default;
 
@@ -73,16 +81,16 @@ struct Chunk {
 
     void initialize(
         const godot::Vector3& position,
-        const std::map<DiscreteLandTypeByHeight, i32>& typeCounts
+        const std::map<ReliefType, i32>& typeCounts
     );
 };
 
 class MapManager {
 public:
-    explicit MapManager(SeparatedMapResult sep)
-        : elevations(std::move(sep.discrete)),
-          gridWidth(sep.mapResult.width),
-          gridHeight(sep.mapResult.height) {}
+    explicit MapManager(std::unique_ptr<TileData[]> tileData, u16 width, u16 height)
+        : tiles(std::move(tileData)),
+          gridWidth(width),
+          gridHeight(height) {}
 
     MapManager(const MapManager&) = delete;
     MapManager& operator=(const MapManager&) = delete;
@@ -99,7 +107,7 @@ public:
 private:
     std::unordered_map<godot::Vector2i, Chunk> loadedChunks;
     std::future<void> futureResult;
-    std::unique_ptr<DiscreteLandTypeByHeight[]> elevations;
+    std::unique_ptr<TileData[]> tiles;
 
 public:
     Chunk* chunk = nullptr;

@@ -6,13 +6,21 @@
 #define SYSTEMNEXUS_H
 #include "api-classes/PlayScene.h"
 #include "map/MapManager.h"
+#include "map/BiomeClassifier.h"
 #include "map/elevations-creation/LayerSeparator.h"
 
 //FIXME: возможно, стоит улучшить, сделать нормальную регистрацию и авто-отписку через RAII-объект, но пока норм, хоть и костыльно
 class SystemNexus {
 public:
     static void configureMap(SeparatedMapResult mapResult) {
-        mapManager = new MapManager(std::move(mapResult));
+        auto tiles = BiomeClassifier::classify(
+            mapResult.discrete,
+            mapResult.mapResult.width,
+            mapResult.mapResult.height);
+        mapManager = new MapManager(
+            std::move(tiles),
+            mapResult.mapResult.width,
+            mapResult.mapResult.height);
     }
     static MapManager* getMapManager() {
         return mapManager;
