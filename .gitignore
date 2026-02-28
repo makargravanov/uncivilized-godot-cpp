@@ -92,3 +92,5 @@ compile_commands.json
 cmake-build*
 CMakeUserPresets.json
 /.cache/
+
+.dev/

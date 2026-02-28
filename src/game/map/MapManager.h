@@ -34,8 +34,6 @@ struct std::hash<godot::Vector2i> {
 };
 
 struct LandTypeMeshData {
-    static godot::Ref<godot::Resource> sharedBiomeMaterial;
-
     GodotPtr<godot::MultiMeshInstance3D> instance;
     godot::Ref<godot::MultiMesh> multiMesh;
 
@@ -48,7 +46,7 @@ struct LandTypeMeshData {
     LandTypeMeshData& operator=(const LandTypeMeshData&) = delete;
 
     void create();
-    bool initialize(i32 instanceCount, const char* meshPath) const;
+    bool initialize(i32 instanceCount, const char* meshPath, const char* materialPath) const;
     void addToScene() const;
     void removeFromScene() const;
 

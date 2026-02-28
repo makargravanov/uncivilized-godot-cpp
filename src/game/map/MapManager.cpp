@@ -13,15 +13,13 @@ f32 MapManager::tileVerticalOffset     = 150.0 / 100;
 u8  MapManager::renderDistance         = 4;
 
 
-godot::Ref<godot::Resource> LandTypeMeshData::sharedBiomeMaterial;
-
 void LandTypeMeshData::create() {
     instance = GodotPtr(memnew(godot::MultiMeshInstance3D));
     multiMesh.instantiate();
     instance->set_multimesh(multiMesh);
 }
 
-bool LandTypeMeshData::initialize(i32 instanceCount, const char* meshPath) const {
+bool LandTypeMeshData::initialize(i32 instanceCount, const char* meshPath, const char* materialPath) const {
     if (!multiMesh.is_valid() || !instance) {
         return false;
     }
@@ -40,13 +38,13 @@ bool LandTypeMeshData::initialize(i32 instanceCount, const char* meshPath) const
         return false;
     }
 
-    // Shared biome ShaderMaterial — loaded once, applied to every MultiMeshInstance3D
-    if (sharedBiomeMaterial.is_null()) {
-        sharedBiomeMaterial = godot::ResourceLoader::get_singleton()->load(
-            "res://shaders/tile_biome_material.tres");
-    }
-    if (sharedBiomeMaterial.is_valid()) {
-        instance->set_material_override(sharedBiomeMaterial);
+    // Per-relief ShaderMaterial (ocean / land / mountain)
+    const godot::Ref<godot::Resource> material =
+        godot::ResourceLoader::get_singleton()->load(materialPath);
+    if (material.is_valid()) {
+        instance->set_material_override(material);
+    } else {
+        godot::print_line("Failed to load material: ", materialPath);
     }
 
     return true;
@@ -81,12 +79,13 @@ void Chunk::initialize(
             continue;
         }
 
-        const char* meshPath = getMeshPath(type);
+        const char* meshPath     = getMeshPath(type);
+        const char* materialPath = getMaterialPath(type);
 
         LandTypeMeshData meshData;
         meshData.create();
 
-        if (meshData.initialize(count, meshPath)) {
+        if (meshData.initialize(count, meshPath, materialPath)) {
             meshData.addToScene();
             meshes.emplace(type, std::move(meshData));
         }
