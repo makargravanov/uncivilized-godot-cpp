@@ -7,14 +7,18 @@
 
 #include "util/declarations.h"
 
-// Tile features / decorations — future layer (forests, rivers, swamps, etc.).
-enum FeatureType : u8 {
-    FEATURE_NONE = 0,
-    // Future values:
-    // FEATURE_FOREST_DECIDUOUS,
-    // FEATURE_FOREST_CONIFER,
-    // FEATURE_RIVER,
-    // FEATURE_SWAMP,
-};
+// Tile features — bitflags, multiple can coexist on one tile.
+// A tile can have forest AND river AND swamp simultaneously.
+using FeatureFlags = u8;
+
+namespace Feature {
+    constexpr FeatureFlags NONE           = 0;
+    constexpr FeatureFlags HAS_FOREST     = 1 << 0;  // forest present (type determined by biome)
+    constexpr FeatureFlags FOREST_CLEARED = 1 << 1;  // forest was cut — potential for regrowth
+    constexpr FeatureFlags HAS_SWAMP      = 1 << 2;
+    constexpr FeatureFlags FLOOD_PLAIN    = 1 << 3;  // river floodplain
+    constexpr FeatureFlags HAS_ICE        = 1 << 4;  // ice cover (climate-driven)
+    // 3 bits free
+}
 
 #endif //FEATURETYPE_H

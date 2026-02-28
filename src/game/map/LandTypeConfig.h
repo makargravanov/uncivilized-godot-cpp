@@ -13,9 +13,10 @@ struct LandTypeConfig {
     const char* meshPath;
 };
 
-// One mesh per relief geometry.  HIGH_MOUNTAIN reuses the MOUNTAIN mesh.
+// One mesh per relief group.  Ocean + land share the flat hex geometry.
 inline constexpr LandTypeConfig LAND_TYPE_CONFIGS[] = {
-    {RELIEF_FLAT,          "res://hexagon_mesh.tres"},
+    {RELIEF_OCEAN,         "res://hexagon_mesh.tres"},
+    {RELIEF_LAND,          "res://hexagon_mesh.tres"},
     {RELIEF_HILL,          "res://hill_hexagon_mesh.tres"},
     {RELIEF_MOUNTAIN,      "res://mountain_hexagon_mesh.tres"},
     {RELIEF_HIGH_MOUNTAIN, "res://mountain_hexagon_mesh.tres"},

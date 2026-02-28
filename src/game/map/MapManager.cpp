@@ -104,6 +104,8 @@ void MapManager::loadChunk(godot::Vector2i vec) {
     struct InstanceData {
         godot::Transform3D transform;
         f32 biomeId;
+        f32 riverEdges;
+        f32 features;
     };
     std::map<ReliefType, std::vector<InstanceData>> tilesByRelief;
 
@@ -120,8 +122,12 @@ void MapManager::loadChunk(godot::Vector2i vec) {
                 const auto& tile = tiles[globalY * gridWidth + globalX];
                 godot::Transform3D tileTransform = calculateTileTransform(globalX, globalY);
 
-                tilesByRelief[tile.relief].push_back(
-                    {tileTransform, static_cast<f32>(tile.biome)});
+                tilesByRelief[tile.relief].push_back({
+                    tileTransform,
+                    static_cast<f32>(tile.biome),
+                    static_cast<f32>(tile.river_edges),
+                    static_cast<f32>(tile.features)
+                });
             }
         }
     }
@@ -140,7 +146,10 @@ void MapManager::loadChunk(godot::Vector2i vec) {
             for (i32 i = 0; i < static_cast<i32>(instances.size()); ++i) {
                 it->second.setInstanceTransform(i, instances[i].transform);
                 it->second.setInstanceCustomData(i,
-                    godot::Color(instances[i].biomeId, 0.0f, 0.0f, 0.0f));
+                    godot::Color(instances[i].biomeId,
+                                 instances[i].riverEdges,
+                                 instances[i].features,
+                                 0.0f));
             }
         }
     }

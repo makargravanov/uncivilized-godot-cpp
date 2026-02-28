@@ -7,13 +7,14 @@
 
 #include "util/declarations.h"
 
-// Purely geometric classification — determines which mesh to render.
-// Each value maps to exactly one mesh geometry.
+// Geometric + surface classification — determines mesh AND shader group.
+// Each value maps to one MultiMesh group (mesh + material).
 enum ReliefType : u8 {
-    RELIEF_FLAT          = 0,  // flat hex (ocean, plain, depression, lowland — all flat geometry)
-    RELIEF_HILL          = 1,  // hill hex (elevated terrain)
-    RELIEF_MOUNTAIN      = 2,  // mountain hex (peaked terrain)
-    RELIEF_HIGH_MOUNTAIN = 3,  // placeholder — currently uses MOUNTAIN mesh
+    RELIEF_OCEAN         = 0,  // flat hex, water surface (separate shader group)
+    RELIEF_LAND          = 1,  // flat hex, land surface
+    RELIEF_HILL          = 2,  // hill hex (elevated terrain)
+    RELIEF_MOUNTAIN      = 3,  // mountain hex (peaked terrain)
+    RELIEF_HIGH_MOUNTAIN = 4,  // placeholder — currently uses MOUNTAIN mesh
     RELIEF_TYPE_COUNT
 };
 

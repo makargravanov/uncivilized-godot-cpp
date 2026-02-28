@@ -20,4 +20,8 @@ enum BiomeType : u8 {
     BIOME_TYPE_COUNT
 };
 
+inline bool isWaterBiome(BiomeType b) {
+    return b <= BIOME_SHALLOW_INLAND_SEA;
+}
+
 #endif //BIOMETYPE_H
