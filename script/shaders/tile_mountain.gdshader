@@ -1,17 +1,21 @@
 shader_type spatial;
 
 // Mountain shader — applied to RELIEF_MOUNTAIN and RELIEF_HIGH_MOUNTAIN groups.
-// INSTANCE_CUSTOM.x = biome_id.
+// INSTANCE_CUSTOM.x = biome_id, .w = overlay_value.
 // Procedural: snow by world-space normal steepness, rock/grass by slope, noise variation.
 
+uniform int view_mode : hint_range(0, 4) = 0;
+
 varying flat float biome_id;
+varying flat float overlay_value;
 varying vec3 world_pos;
 varying vec3 world_normal;
 
 void vertex() {
-	biome_id     = INSTANCE_CUSTOM.x;
-	world_pos    = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	biome_id      = INSTANCE_CUSTOM.x;
+	overlay_value = INSTANCE_CUSTOM.w;
+	world_pos     = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	world_normal  = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
 
 // ── Noise utilities ──────────────────────────────────────────────
@@ -48,6 +52,46 @@ float fbm2(vec2 p) {
 	     + value_noise(p * 2.0) * 0.25;
 }
 
+// ── Overlay heatmap ramp ─────────────────────────────────────────
+
+vec3 heatmap_ramp(float t, int mode) {
+	t = clamp(t, 0.0, 1.0);
+	if (mode == 1) {
+		vec3 c0 = vec3(0.1, 0.2, 0.7);
+		vec3 c1 = vec3(0.0, 0.8, 0.8);
+		vec3 c2 = vec3(0.2, 0.8, 0.2);
+		vec3 c3 = vec3(0.9, 0.9, 0.1);
+		vec3 c4 = vec3(0.8, 0.1, 0.1);
+		if (t < 0.25) return mix(c0, c1, t / 0.25);
+		if (t < 0.50) return mix(c1, c2, (t - 0.25) / 0.25);
+		if (t < 0.75) return mix(c2, c3, (t - 0.50) / 0.25);
+		return mix(c3, c4, (t - 0.75) / 0.25);
+	}
+	if (mode == 2) {
+		vec3 c0 = vec3(0.6, 0.4, 0.2);
+		vec3 c1 = vec3(0.8, 0.8, 0.2);
+		vec3 c2 = vec3(0.2, 0.7, 0.3);
+		vec3 c3 = vec3(0.1, 0.5, 0.8);
+		vec3 c4 = vec3(0.1, 0.2, 0.7);
+		if (t < 0.25) return mix(c0, c1, t / 0.25);
+		if (t < 0.50) return mix(c1, c2, (t - 0.25) / 0.25);
+		if (t < 0.75) return mix(c2, c3, (t - 0.50) / 0.25);
+		return mix(c3, c4, (t - 0.75) / 0.25);
+	}
+	if (mode == 3) {
+		vec3 c0 = vec3(0.1, 0.3, 0.1);
+		vec3 c1 = vec3(0.3, 0.6, 0.2);
+		vec3 c2 = vec3(0.8, 0.8, 0.3);
+		vec3 c3 = vec3(1.0, 1.0, 1.0);
+		if (t < 0.33) return mix(c0, c1, t / 0.33);
+		if (t < 0.66) return mix(c1, c2, (t - 0.33) / 0.33);
+		return mix(c2, c3, (t - 0.66) / 0.34);
+	}
+	float hue = fract(t * 0.618 + 0.1);
+	vec3 c = clamp(abs(mod(hue * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+	return mix(vec3(0.3), c, 0.7);
+}
+
 // ── Material colours ─────────────────────────────────────────────
 
 const vec3 ROCK_COLOR     = vec3(0.45, 0.42, 0.38);
@@ -58,6 +102,14 @@ const vec3 GRASS_COLOR    = vec3(0.30, 0.38, 0.18);
 // ── Fragment ─────────────────────────────────────────────────────
 
 void fragment() {
+	// ── Overlay mode: early exit with heatmap colour ──
+	if (view_mode > 0) {
+		ALBEDO = heatmap_ramp(overlay_value, view_mode);
+		ROUGHNESS = 0.9;
+		METALLIC = 0.0;
+		return;
+	}
+
 	int biome = clamp(int(biome_id + 0.5), 0, 7);
 
 	vec2 noise_uv = world_pos.xz;

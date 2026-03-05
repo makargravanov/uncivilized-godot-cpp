@@ -19,7 +19,7 @@ void LandTypeMeshData::create() {
     instance->set_multimesh(multiMesh);
 }
 
-bool LandTypeMeshData::initialize(i32 instanceCount, const char* meshPath, const char* materialPath) const {
+bool LandTypeMeshData::initialize(i32 instanceCount, const char* meshPath, const char* materialPath) {
     if (!multiMesh.is_valid() || !instance) {
         return false;
     }
@@ -39,10 +39,11 @@ bool LandTypeMeshData::initialize(i32 instanceCount, const char* meshPath, const
     }
 
     // Per-relief ShaderMaterial (ocean / land / mountain)
-    const godot::Ref<godot::Resource> material =
+    const godot::Ref<godot::Resource> matRes =
         godot::ResourceLoader::get_singleton()->load(materialPath);
-    if (material.is_valid()) {
-        instance->set_material_override(material);
+    if (matRes.is_valid()) {
+        instance->set_material_override(matRes);
+        material = matRes;
     } else {
         godot::print_line("Failed to load material: ", materialPath);
     }
@@ -105,6 +106,7 @@ void MapManager::loadChunk(godot::Vector2i vec) {
         f32 biomeId;
         f32 riverEdges;
         f32 features;
+        i32 tileIndex;
     };
     std::map<ReliefType, std::vector<InstanceData>> tilesByRelief;
 
@@ -120,12 +122,14 @@ void MapManager::loadChunk(godot::Vector2i vec) {
 
                 const auto& tile = tiles[globalY * gridWidth + globalX];
                 godot::Transform3D tileTransform = calculateTileTransform(globalX, globalY);
+                const i32 tileIndex = globalY * gridWidth + globalX;
 
                 tilesByRelief[tile.relief].push_back({
                     tileTransform,
                     static_cast<f32>(tile.biome),
                     static_cast<f32>(tile.river_edges),
-                    static_cast<f32>(tile.features)
+                    static_cast<f32>(tile.features),
+                    tileIndex
                 });
             }
         }
@@ -142,13 +146,26 @@ void MapManager::loadChunk(godot::Vector2i vec) {
 
     for (const auto& [relief, instances] : tilesByRelief) {
         if (auto it = newChunk.meshes.find(relief); it != newChunk.meshes.end()) {
+            it->second.tileIndices.reserve(instances.size());
             for (i32 i = 0; i < static_cast<i32>(instances.size()); ++i) {
                 it->second.setInstanceTransform(i, instances[i].transform);
+
+                f32 overlayVal = 0.0f;
+                if (currentViewMode != VIEW_NORMAL && currentOverlayFunc) {
+                    overlayVal = currentOverlayFunc(instances[i].tileIndex);
+                }
+
                 it->second.setInstanceCustomData(i,
                     godot::Color(instances[i].biomeId,
                                  instances[i].riverEdges,
                                  instances[i].features,
-                                 0.0f));
+                                 overlayVal));
+                it->second.tileIndices.push_back(instances[i].tileIndex);
+            }
+
+            // Apply current view_mode uniform.
+            if (it->second.material.is_valid()) {
+                it->second.material->set_shader_parameter("view_mode", static_cast<int>(currentViewMode));
             }
         }
     }
@@ -212,5 +229,32 @@ godot::Vector3 MapManager::getChunkPos(const godot::Vector3& worldPos) {
         0,
         std::floor(worldPos.z / (tileVerticalOffset * CHUNK_SIZE))
     );
+}
+
+void MapManager::setViewMode(ViewMode mode, const OverlayFunc& overlayFunc) {
+    currentViewMode = mode;
+    currentOverlayFunc = overlayFunc;
+
+    for (auto& [chunkPos, chunk] : loadedChunks) {
+        for (auto& [relief, meshData] : chunk.meshes) {
+            // Set uniform on material.
+            if (meshData.material.is_valid()) {
+                meshData.material->set_shader_parameter("view_mode", static_cast<int>(mode));
+            }
+
+            // Rewrite .w channel on every instance.
+            if (meshData.multiMesh.is_valid()) {
+                for (i32 i = 0; i < static_cast<i32>(meshData.tileIndices.size()); ++i) {
+                    godot::Color data = meshData.multiMesh->get_instance_custom_data(i);
+                    if (mode != VIEW_NORMAL && overlayFunc) {
+                        data.a = overlayFunc(meshData.tileIndices[i]);
+                    } else {
+                        data.a = 0.0f;
+                    }
+                    meshData.multiMesh->set_instance_custom_data(i, data);
+                }
+            }
+        }
+    }
 }
 

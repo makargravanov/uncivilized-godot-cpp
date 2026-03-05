@@ -9,8 +9,10 @@
 #include "util/declarations.h"
 #include "util/GodotPtr.h"
 #include "TileData.h"
+#include "ViewMode.h"
 #include "game/map/LandTypeConfig.h"
 
+#include <functional>
 #include <future>
 #include <map>
 #include <memory>
@@ -22,6 +24,7 @@
 #include <godot_cpp/classes/multi_mesh.hpp>
 #include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
+#include <godot_cpp/classes/shader_material.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
 constexpr u8 CHUNK_SIZE = 64;
@@ -36,6 +39,10 @@ struct std::hash<godot::Vector2i> {
 struct LandTypeMeshData {
     GodotPtr<godot::MultiMeshInstance3D> instance;
     godot::Ref<godot::MultiMesh> multiMesh;
+    godot::Ref<godot::ShaderMaterial> material;
+
+    // Per-instance tile index for overlay updates.
+    std::vector<i32> tileIndices;
 
     LandTypeMeshData() = default;
 
@@ -46,7 +53,7 @@ struct LandTypeMeshData {
     LandTypeMeshData& operator=(const LandTypeMeshData&) = delete;
 
     void create();
-    bool initialize(i32 instanceCount, const char* meshPath, const char* materialPath) const;
+    bool initialize(i32 instanceCount, const char* meshPath, const char* materialPath);
     void addToScene() const;
     void removeFromScene() const;
 
@@ -83,6 +90,9 @@ struct Chunk {
     );
 };
 
+// Callback: given a tile index, return the overlay value [0,1] for current ViewMode.
+using OverlayFunc = std::function<f32(i32 tileIndex)>;
+
 class MapManager {
 public:
     explicit MapManager(std::unique_ptr<TileData[]> tileData, u16 width, u16 height)
@@ -102,13 +112,19 @@ public:
     void positionUpdated(const godot::Variant& position);
     static godot::Vector3 getChunkPos(const godot::Vector3& worldPos);
 
+    // Overlay system: switch view mode and rewrite .w on all loaded chunks.
+    void setViewMode(ViewMode mode, const OverlayFunc& overlayFunc);
+
+    const TileData& getTile(i32 index) const { return tiles[index]; }
+
 private:
     std::unordered_map<godot::Vector2i, Chunk> loadedChunks;
     std::future<void> futureResult;
     std::unique_ptr<TileData[]> tiles;
+    ViewMode currentViewMode = VIEW_NORMAL;
+    OverlayFunc currentOverlayFunc;
 
 public:
-    Chunk* chunk = nullptr;
     static f32 tileHorizontalOffset;
     static f32 oddRowHorizontalOffset;
     static f32 tileVerticalOffset;

@@ -6,6 +6,7 @@
 #define PLAYSCENE_H
 
 #include "util/declarations.h"
+#include "game/map/ViewMode.h"
 #include <future>
 
 #include <godot_cpp/classes/node.hpp>
@@ -28,6 +29,9 @@ public:
     void position_updated(const godot::Variant& position);
     void addISM(godot::MultiMeshInstance3D* meshInstance);
     void removeISM(godot::MultiMeshInstance3D* meshInstance);
+
+    // Overlay system — call from GDScript: play_scene.set_view_mode(0..4)
+    void set_view_mode(int mode);
 
 private:
     MapManager* mapManager = nullptr;

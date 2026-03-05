@@ -1,18 +1,22 @@
 shader_type spatial;
 
 // Ocean shader — applied to RELIEF_OCEAN MultiMesh group.
-// INSTANCE_CUSTOM.x = biome_id (0–3 for ocean biomes).
+// INSTANCE_CUSTOM.x = biome_id (0–3 for ocean biomes), .w = overlay_value.
 // Features:
 //   - Animated ripple via procedural normal map (no vertex displacement)
 //   - Parallax fake-depth: view-dependent UV shift reveals "seabed" layer
 //   - Deep vs shallow biome controls depth amount and colour
 
+uniform int view_mode : hint_range(0, 4) = 0;
+
 varying flat float biome_id;
+varying flat float overlay_value;
 varying vec3 world_pos;
 
 void vertex() {
-	biome_id  = INSTANCE_CUSTOM.x;
-	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	biome_id      = INSTANCE_CUSTOM.x;
+	overlay_value = INSTANCE_CUSTOM.w;
+	world_pos     = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 
 // ── Hash / noise (same as land shader, duplicated to keep shaders self-contained) ──
@@ -81,6 +85,46 @@ vec3 parallax_seabed(vec2 uv, vec3 view_dir_tangent, float depth_scale, float ti
 	return seabed_color;
 }
 
+// ── Overlay heatmap ramp ─────────────────────────────────────────
+
+vec3 heatmap_ramp(float t, int mode) {
+	t = clamp(t, 0.0, 1.0);
+	if (mode == 1) {
+		vec3 c0 = vec3(0.1, 0.2, 0.7);
+		vec3 c1 = vec3(0.0, 0.8, 0.8);
+		vec3 c2 = vec3(0.2, 0.8, 0.2);
+		vec3 c3 = vec3(0.9, 0.9, 0.1);
+		vec3 c4 = vec3(0.8, 0.1, 0.1);
+		if (t < 0.25) return mix(c0, c1, t / 0.25);
+		if (t < 0.50) return mix(c1, c2, (t - 0.25) / 0.25);
+		if (t < 0.75) return mix(c2, c3, (t - 0.50) / 0.25);
+		return mix(c3, c4, (t - 0.75) / 0.25);
+	}
+	if (mode == 2) {
+		vec3 c0 = vec3(0.6, 0.4, 0.2);
+		vec3 c1 = vec3(0.8, 0.8, 0.2);
+		vec3 c2 = vec3(0.2, 0.7, 0.3);
+		vec3 c3 = vec3(0.1, 0.5, 0.8);
+		vec3 c4 = vec3(0.1, 0.2, 0.7);
+		if (t < 0.25) return mix(c0, c1, t / 0.25);
+		if (t < 0.50) return mix(c1, c2, (t - 0.25) / 0.25);
+		if (t < 0.75) return mix(c2, c3, (t - 0.50) / 0.25);
+		return mix(c3, c4, (t - 0.75) / 0.25);
+	}
+	if (mode == 3) {
+		vec3 c0 = vec3(0.1, 0.3, 0.1);
+		vec3 c1 = vec3(0.3, 0.6, 0.2);
+		vec3 c2 = vec3(0.8, 0.8, 0.3);
+		vec3 c3 = vec3(1.0, 1.0, 1.0);
+		if (t < 0.33) return mix(c0, c1, t / 0.33);
+		if (t < 0.66) return mix(c1, c2, (t - 0.33) / 0.33);
+		return mix(c2, c3, (t - 0.66) / 0.34);
+	}
+	float hue = fract(t * 0.618 + 0.1);
+	vec3 c = clamp(abs(mod(hue * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+	return mix(vec3(0.3), c, 0.7);
+}
+
 // ── Colour palettes ─────────────────────────────────────────────
 
 void get_ocean_params(int biome, out vec3 surface_col, out float depth, out float specular_val) {
@@ -107,6 +151,14 @@ void get_ocean_params(int biome, out vec3 surface_col, out float depth, out floa
 // ── Fragment ─────────────────────────────────────────────────────
 
 void fragment() {
+	// ── Overlay mode: early exit with heatmap colour ──
+	if (view_mode > 0) {
+		ALBEDO = heatmap_ramp(overlay_value, view_mode);
+		ROUGHNESS = 0.9;
+		METALLIC = 0.0;
+		return;
+	}
+
 	int biome = clamp(int(biome_id + 0.5), 0, 7);
 	vec2 uv = world_pos.xz;
 
