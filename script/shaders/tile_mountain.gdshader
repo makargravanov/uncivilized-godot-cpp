@@ -35,16 +35,17 @@ float value_noise(vec2 p) {
 	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
-float fbm(vec2 p, int octaves) {
-	float value = 0.0;
-	float amplitude = 0.5;
-	float frequency = 1.0;
-	for (int i = 0; i < octaves; i++) {
-		value += amplitude * value_noise(p * frequency);
-		frequency *= 2.0;
-		amplitude *= 0.5;
-	}
-	return value;
+// fbm3: 3 octaves, manually unrolled.
+float fbm3(vec2 p) {
+	return value_noise(p) * 0.5
+	     + value_noise(p * 2.0) * 0.25
+	     + value_noise(p * 4.0) * 0.125;
+}
+
+// fbm2: 2 octaves.
+float fbm2(vec2 p) {
+	return value_noise(p) * 0.5
+	     + value_noise(p * 2.0) * 0.25;
 }
 
 // ── Material colours ─────────────────────────────────────────────
@@ -66,8 +67,8 @@ void fragment() {
 	slope = clamp(slope, 0.0, 1.0);
 
 	// Noise layers for natural variation.
-	float large_noise = fbm(noise_uv * 0.15, 3);
-	float med_noise   = fbm(noise_uv * 0.5, 2);
+	float large_noise = fbm3(noise_uv * 0.15);
+	float med_noise   = fbm2(noise_uv * 0.5);
 	float fine_noise  = value_noise(noise_uv * 2.5);
 
 	// ── Base rock colour with noise variation ──
