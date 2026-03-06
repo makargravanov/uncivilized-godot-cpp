@@ -156,40 +156,39 @@ void fragment() {
 		ALBEDO = heatmap_ramp(overlay_value, view_mode);
 		ROUGHNESS = 0.9;
 		METALLIC = 0.0;
-		return;
+	} else {
+		int biome = clamp(int(biome_id + 0.5), 0, 7);
+		vec2 uv = world_pos.xz;
+
+		// Biome-dependent parameters.
+		vec3 surface_col;
+		float depth_scale;
+		float specular_val;
+		get_ocean_params(biome, surface_col, depth_scale, specular_val);
+
+		// ── Animated ripple normal ──
+		vec3 ripple = ripple_normal(uv, TIME);
+		NORMAL_MAP = ripple * 0.5 + 0.5;
+		NORMAL_MAP_DEPTH = 0.6;
+
+		// ── Parallax seabed ──
+		// Approximate tangent-space view direction from camera.
+		vec3 view_world = normalize(CAMERA_POSITION_WORLD - world_pos);
+		vec3 seabed = parallax_seabed(uv, view_world, depth_scale, TIME);
+
+		// Fresnel: more reflection at grazing angles, more depth when looking straight down.
+		float fresnel = pow(1.0 - clamp(dot(view_world, vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 3.0);
+
+		// Blend surface colour (reflective) with seabed (depth).
+		vec3 color = mix(seabed, surface_col, 0.35 + fresnel * 0.55);
+
+		// Subtle caustic shimmer on the surface.
+		float shimmer = value_noise(uv * 5.0 + vec2(TIME * 0.12, TIME * 0.08));
+		color += vec3(0.02, 0.03, 0.04) * smoothstep(0.55, 0.85, shimmer);
+
+		ALBEDO    = color;
+		METALLIC  = 0.2;
+		ROUGHNESS = 0.15 + (1.0 - fresnel) * 0.2;  // smoother at glancing angles
+		SPECULAR  = specular_val;
 	}
-
-	int biome = clamp(int(biome_id + 0.5), 0, 7);
-	vec2 uv = world_pos.xz;
-
-	// Biome-dependent parameters.
-	vec3 surface_col;
-	float depth_scale;
-	float specular_val;
-	get_ocean_params(biome, surface_col, depth_scale, specular_val);
-
-	// ── Animated ripple normal ──
-	vec3 ripple = ripple_normal(uv, TIME);
-	NORMAL_MAP = ripple * 0.5 + 0.5;
-	NORMAL_MAP_DEPTH = 0.6;
-
-	// ── Parallax seabed ──
-	// Approximate tangent-space view direction from camera.
-	vec3 view_world = normalize(CAMERA_POSITION_WORLD - world_pos);
-	vec3 seabed = parallax_seabed(uv, view_world, depth_scale, TIME);
-
-	// Fresnel: more reflection at grazing angles, more depth when looking straight down.
-	float fresnel = pow(1.0 - clamp(dot(view_world, vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 3.0);
-
-	// Blend surface colour (reflective) with seabed (depth).
-	vec3 color = mix(seabed, surface_col, 0.35 + fresnel * 0.55);
-
-	// Subtle caustic shimmer on the surface.
-	float shimmer = value_noise(uv * 5.0 + vec2(TIME * 0.12, TIME * 0.08));
-	color += vec3(0.02, 0.03, 0.04) * smoothstep(0.55, 0.85, shimmer);
-
-	ALBEDO    = color;
-	METALLIC  = 0.2;
-	ROUGHNESS = 0.15 + (1.0 - fresnel) * 0.2;  // smoother at glancing angles
-	SPECULAR  = specular_val;
 }

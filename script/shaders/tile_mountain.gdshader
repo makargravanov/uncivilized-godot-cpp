@@ -107,51 +107,50 @@ void fragment() {
 		ALBEDO = heatmap_ramp(overlay_value, view_mode);
 		ROUGHNESS = 0.9;
 		METALLIC = 0.0;
-		return;
-	}
-
-	int biome = clamp(int(biome_id + 0.5), 0, 7);
-
-	vec2 noise_uv = world_pos.xz;
-
-	// Slope factor: 1.0 = flat top, 0.0 = vertical cliff.
-	float slope = dot(world_normal, vec3(0.0, 1.0, 0.0));
-	slope = clamp(slope, 0.0, 1.0);
-
-	// Noise layers for natural variation.
-	float large_noise = fbm3(noise_uv * 0.15);
-	float med_noise   = fbm2(noise_uv * 0.5);
-	float fine_noise  = value_noise(noise_uv * 2.5);
-
-	// ── Base rock colour with noise variation ──
-	vec3 rock = mix(ROCK_COLOR, ROCK_ALT_COLOR, smoothstep(0.35, 0.65, large_noise));
-	rock += (med_noise - 0.5) * 0.05;
-	rock += (fine_noise - 0.5) * 0.025;
-
-	vec3 color;
-	float roughness;
-
-	if (biome == 6) {
-		// ALPINE — snow on flat surfaces, exposed rock on steep slopes.
-		float snow_noise = value_noise(noise_uv * 1.2) * 0.15;
-		float snow_factor = smoothstep(0.55, 0.75, slope + snow_noise);
-		color = mix(rock, SNOW_COLOR, snow_factor);
-		roughness = mix(0.9, 0.6, snow_factor);  // snow is smoother
-	} else if (biome == 5) {
-		// HIGHLAND — grass on flat tops, rock on steep sides.
-		vec3 grass = GRASS_COLOR + (large_noise - 0.5) * 0.04;
-		float grass_factor = smoothstep(0.5, 0.8, slope);
-		color = mix(rock, grass, grass_factor);
-		roughness = mix(0.9, 0.85, grass_factor);
 	} else {
-		// Generic mountain — rock with subtle moss on flat surfaces.
-		vec3 moss = vec3(0.28, 0.32, 0.22);
-		float moss_factor = smoothstep(0.6, 0.85, slope) * large_noise * 0.4;
-		color = mix(rock, moss, moss_factor);
-		roughness = 0.9;
-	}
+		int biome = clamp(int(biome_id + 0.5), 0, 7);
 
-	ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));
-	ROUGHNESS = roughness;
-	METALLIC  = 0.0;
+		vec2 noise_uv = world_pos.xz;
+
+		// Slope factor: 1.0 = flat top, 0.0 = vertical cliff.
+		float slope = dot(world_normal, vec3(0.0, 1.0, 0.0));
+		slope = clamp(slope, 0.0, 1.0);
+
+		// Noise layers for natural variation.
+		float large_noise = fbm3(noise_uv * 0.15);
+		float med_noise   = fbm2(noise_uv * 0.5);
+		float fine_noise  = value_noise(noise_uv * 2.5);
+
+		// ── Base rock colour with noise variation ──
+		vec3 rock = mix(ROCK_COLOR, ROCK_ALT_COLOR, smoothstep(0.35, 0.65, large_noise));
+		rock += (med_noise - 0.5) * 0.05;
+		rock += (fine_noise - 0.5) * 0.025;
+
+		vec3 color;
+		float roughness;
+
+		if (biome == 6) {
+			// ALPINE — snow on flat surfaces, exposed rock on steep slopes.
+			float snow_noise = value_noise(noise_uv * 1.2) * 0.15;
+			float snow_factor = smoothstep(0.55, 0.75, slope + snow_noise);
+			color = mix(rock, SNOW_COLOR, snow_factor);
+			roughness = mix(0.9, 0.6, snow_factor);  // snow is smoother
+		} else if (biome == 5) {
+			// HIGHLAND — grass on flat tops, rock on steep sides.
+			vec3 grass = GRASS_COLOR + (large_noise - 0.5) * 0.04;
+			float grass_factor = smoothstep(0.5, 0.8, slope);
+			color = mix(rock, grass, grass_factor);
+			roughness = mix(0.9, 0.85, grass_factor);
+		} else {
+			// Generic mountain — rock with subtle moss on flat surfaces.
+			vec3 moss = vec3(0.28, 0.32, 0.22);
+			float moss_factor = smoothstep(0.6, 0.85, slope) * large_noise * 0.4;
+			color = mix(rock, moss, moss_factor);
+			roughness = 0.9;
+		}
+
+		ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));
+		ROUGHNESS = roughness;
+		METALLIC  = 0.0;
+	}
 }

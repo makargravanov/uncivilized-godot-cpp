@@ -128,35 +128,34 @@ void fragment() {
 		ALBEDO = heatmap_ramp(overlay_value, view_mode);
 		ROUGHNESS = 0.9;
 		METALLIC = 0.0;
-		return;
+	} else {
+		int biome = clamp(int(biome_id + 0.5), 0, 7);
+
+		vec3 base_col = get_biome_base_color(biome);
+		vec3 alt_col  = get_biome_alt_color(biome);
+
+		// World-space noise coordinates — seamless across tiles.
+		vec2 noise_uv = world_pos.xz;
+
+		// Large-scale colour variation (patches of darker/lighter terrain).
+		float large_noise = fbm3(noise_uv * 0.15);
+
+		// Medium-scale detail.
+		float med_noise = fbm2(noise_uv * 0.6);
+
+		// Fine-grain detail (grass-like texture).
+		float fine_noise = value_noise(noise_uv * 3.0);
+
+		// Blend: large patches drive base↔alt mix, medium+fine add brightness variation.
+		vec3 color = mix(base_col, alt_col, smoothstep(0.3, 0.7, large_noise));
+		color += (med_noise - 0.5) * 0.06;   // subtle medium detail
+		color += (fine_noise - 0.5) * 0.03;   // fine grain
+
+		// Slight roughness variation from noise.
+		float roughness = 0.85 + (med_noise - 0.5) * 0.1;
+
+		ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));
+		ROUGHNESS = roughness;
+		METALLIC  = 0.0;
 	}
-
-	int biome = clamp(int(biome_id + 0.5), 0, 7);
-
-	vec3 base_col = get_biome_base_color(biome);
-	vec3 alt_col  = get_biome_alt_color(biome);
-
-	// World-space noise coordinates — seamless across tiles.
-	vec2 noise_uv = world_pos.xz;
-
-	// Large-scale colour variation (patches of darker/lighter terrain).
-	float large_noise = fbm3(noise_uv * 0.15);
-
-	// Medium-scale detail.
-	float med_noise = fbm2(noise_uv * 0.6);
-
-	// Fine-grain detail (grass-like texture).
-	float fine_noise = value_noise(noise_uv * 3.0);
-
-	// Blend: large patches drive base↔alt mix, medium+fine add brightness variation.
-	vec3 color = mix(base_col, alt_col, smoothstep(0.3, 0.7, large_noise));
-	color += (med_noise - 0.5) * 0.06;   // subtle medium detail
-	color += (fine_noise - 0.5) * 0.03;   // fine grain
-
-	// Slight roughness variation from noise.
-	float roughness = 0.85 + (med_noise - 0.5) * 0.1;
-
-	ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));
-	ROUGHNESS = roughness;
-	METALLIC  = 0.0;
 }
