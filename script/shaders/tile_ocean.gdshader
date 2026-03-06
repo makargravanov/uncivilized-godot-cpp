@@ -151,14 +151,12 @@ void get_ocean_params(int biome, out vec3 surface_col, out float depth, out floa
 // ── Fragment ─────────────────────────────────────────────────────
 
 void fragment() {
-	// ── Overlay mode: early exit with heatmap colour ──
 	if (view_mode > 0) {
+		// ── Overlay mode ──
 		ALBEDO = heatmap_ramp(overlay_value, view_mode);
 		ROUGHNESS = 0.9;
 		METALLIC = 0.0;
-		return;
-	}
-
+	} else {
 	int biome = clamp(int(biome_id + 0.5), 0, 7);
 	vec2 uv = world_pos.xz;
 
@@ -190,6 +188,7 @@ void fragment() {
 
 	ALBEDO    = color;
 	METALLIC  = 0.2;
-	ROUGHNESS = 0.15 + (1.0 - fresnel) * 0.2;  // smoother at glancing angles
+	ROUGHNESS = 0.15 + (1.0 - fresnel) * 0.2;
 	SPECULAR  = specular_val;
+	} // else (normal mode)
 }

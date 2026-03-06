@@ -108,55 +108,81 @@ float fbm2(vec2 p) {
 // ── Biome colour palette ─────────────────────────────────────────
 
 vec3 get_biome_base_color(int biome) {
-	if (biome == 4) { return vec3(0.537, 0.628, 0.210); } // GRASSLAND
-	if (biome == 5) { return vec3(0.250, 0.336, 0.153); } // HIGHLAND
-	return vec3(0.537, 0.628, 0.210);                      // fallback
+	// Water biomes (0–3) shouldn't hit land shader, but handle gracefully.
+	if (biome <= 3) { return vec3(0.2, 0.3, 0.5); }
+	// Tropical
+	if (biome == 4)  { return vec3(0.15, 0.45, 0.12); } // TROPICAL_RAINFOREST — deep green
+	if (biome == 5)  { return vec3(0.30, 0.50, 0.15); } // TROPICAL_SEASONAL — lighter green
+	if (biome == 6)  { return vec3(0.60, 0.55, 0.25); } // SAVANNA — golden
+	if (biome == 7)  { return vec3(0.76, 0.65, 0.40); } // SUBTROPICAL_DESERT — sandy
+	// Temperate
+	if (biome == 8)  { return vec3(0.28, 0.48, 0.18); } // TEMPERATE_FOREST — green
+	if (biome == 9)  { return vec3(0.54, 0.63, 0.21); } // TEMPERATE_GRASSLAND — steppe
+	if (biome == 10) { return vec3(0.70, 0.58, 0.38); } // TEMPERATE_DESERT — dry earth
+	// Boreal & Polar
+	if (biome == 11) { return vec3(0.18, 0.32, 0.16); } // BOREAL_FOREST — dark green
+	if (biome == 12) { return vec3(0.55, 0.56, 0.50); } // TUNDRA — grey-green
+	if (biome == 13) { return vec3(0.88, 0.90, 0.92); } // ICE_SHEET — near white
+	// Altitude
+	if (biome == 14) { return vec3(0.25, 0.34, 0.15); } // HIGHLAND
+	if (biome == 15) { return vec3(0.50, 0.48, 0.42); } // ALPINE — grey-brown rock
+	return vec3(0.54, 0.63, 0.21);                       // fallback
 }
 
 // Secondary colour for noise blending — slightly shifted hue.
 vec3 get_biome_alt_color(int biome) {
-	if (biome == 4) { return vec3(0.420, 0.550, 0.180); } // GRASSLAND — darker olive
-	if (biome == 5) { return vec3(0.200, 0.280, 0.120); } // HIGHLAND — darker forest
-	return vec3(0.420, 0.550, 0.180);
+	if (biome <= 3) { return vec3(0.15, 0.25, 0.45); }
+	if (biome == 4)  { return vec3(0.10, 0.38, 0.08); } // TROPICAL_RAINFOREST
+	if (biome == 5)  { return vec3(0.24, 0.42, 0.10); } // TROPICAL_SEASONAL
+	if (biome == 6)  { return vec3(0.52, 0.47, 0.20); } // SAVANNA
+	if (biome == 7)  { return vec3(0.68, 0.56, 0.32); } // SUBTROPICAL_DESERT
+	if (biome == 8)  { return vec3(0.22, 0.40, 0.12); } // TEMPERATE_FOREST
+	if (biome == 9)  { return vec3(0.42, 0.55, 0.18); } // TEMPERATE_GRASSLAND
+	if (biome == 10) { return vec3(0.60, 0.48, 0.30); } // TEMPERATE_DESERT
+	if (biome == 11) { return vec3(0.12, 0.26, 0.10); } // BOREAL_FOREST
+	if (biome == 12) { return vec3(0.48, 0.48, 0.42); } // TUNDRA
+	if (biome == 13) { return vec3(0.82, 0.85, 0.88); } // ICE_SHEET
+	if (biome == 14) { return vec3(0.20, 0.28, 0.12); } // HIGHLAND
+	if (biome == 15) { return vec3(0.42, 0.40, 0.35); } // ALPINE
+	return vec3(0.42, 0.55, 0.18);
 }
 
 // ── Fragment ─────────────────────────────────────────────────────
 
 void fragment() {
-	// ── Overlay mode: early exit with heatmap colour ──
 	if (view_mode > 0) {
+		// ── Overlay mode ──
 		ALBEDO = heatmap_ramp(overlay_value, view_mode);
 		ROUGHNESS = 0.9;
 		METALLIC = 0.0;
-		return;
+	} else {
+		int biome = clamp(int(biome_id + 0.5), 0, 15);
+
+		vec3 base_col = get_biome_base_color(biome);
+		vec3 alt_col  = get_biome_alt_color(biome);
+
+		// World-space noise coordinates — seamless across tiles.
+		vec2 noise_uv = world_pos.xz;
+
+		// Large-scale colour variation (patches of darker/lighter terrain).
+		float large_noise = fbm3(noise_uv * 0.15);
+
+		// Medium-scale detail.
+		float med_noise = fbm2(noise_uv * 0.6);
+
+		// Fine-grain detail (grass-like texture).
+		float fine_noise = value_noise(noise_uv * 3.0);
+
+		// Blend: large patches drive base↔alt mix, medium+fine add brightness variation.
+		vec3 color = mix(base_col, alt_col, smoothstep(0.3, 0.7, large_noise));
+		color += (med_noise - 0.5) * 0.06;
+		color += (fine_noise - 0.5) * 0.03;
+
+		// Slight roughness variation from noise.
+		float roughness = 0.85 + (med_noise - 0.5) * 0.1;
+
+		ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));
+		ROUGHNESS = roughness;
+		METALLIC  = 0.0;
 	}
-
-	int biome = clamp(int(biome_id + 0.5), 0, 7);
-
-	vec3 base_col = get_biome_base_color(biome);
-	vec3 alt_col  = get_biome_alt_color(biome);
-
-	// World-space noise coordinates — seamless across tiles.
-	vec2 noise_uv = world_pos.xz;
-
-	// Large-scale colour variation (patches of darker/lighter terrain).
-	float large_noise = fbm3(noise_uv * 0.15);
-
-	// Medium-scale detail.
-	float med_noise = fbm2(noise_uv * 0.6);
-
-	// Fine-grain detail (grass-like texture).
-	float fine_noise = value_noise(noise_uv * 3.0);
-
-	// Blend: large patches drive base↔alt mix, medium+fine add brightness variation.
-	vec3 color = mix(base_col, alt_col, smoothstep(0.3, 0.7, large_noise));
-	color += (med_noise - 0.5) * 0.06;   // subtle medium detail
-	color += (fine_noise - 0.5) * 0.03;   // fine grain
-
-	// Slight roughness variation from noise.
-	float roughness = 0.85 + (med_noise - 0.5) * 0.1;
-
-	ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));
-	ROUGHNESS = roughness;
-	METALLIC  = 0.0;
 }

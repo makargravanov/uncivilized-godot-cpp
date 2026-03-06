@@ -15,8 +15,8 @@ struct TileData {
     BiomeType    biome;
     u8           river_edges = 0;   // 6 bits — one per hex edge (0=N, clockwise)
     FeatureFlags features    = Feature::NONE;
-    // Future: i8  temperature;
-    // Future: u8  precipitation;
+    i8           temperature = 0;   // °C, range −128..+127
+    u16          precipitation = 0; // mm/year, 0–65535
 };
 
 #endif //TILEDATA_H

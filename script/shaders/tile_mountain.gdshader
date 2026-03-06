@@ -102,15 +102,13 @@ const vec3 GRASS_COLOR    = vec3(0.30, 0.38, 0.18);
 // ── Fragment ─────────────────────────────────────────────────────
 
 void fragment() {
-	// ── Overlay mode: early exit with heatmap colour ──
 	if (view_mode > 0) {
+		// ── Overlay mode ──
 		ALBEDO = heatmap_ramp(overlay_value, view_mode);
 		ROUGHNESS = 0.9;
 		METALLIC = 0.0;
-		return;
-	}
-
-	int biome = clamp(int(biome_id + 0.5), 0, 7);
+	} else {
+	int biome = clamp(int(biome_id + 0.5), 0, 15);
 
 	vec2 noise_uv = world_pos.xz;
 
@@ -131,18 +129,24 @@ void fragment() {
 	vec3 color;
 	float roughness;
 
-	if (biome == 6) {
-		// ALPINE — snow on flat surfaces, exposed rock on steep slopes.
+	if (biome == 15 || biome == 13) {
+		// ALPINE / ICE_SHEET — snow on flat surfaces, exposed rock on steep slopes.
 		float snow_noise = value_noise(noise_uv * 1.2) * 0.15;
 		float snow_factor = smoothstep(0.55, 0.75, slope + snow_noise);
 		color = mix(rock, SNOW_COLOR, snow_factor);
-		roughness = mix(0.9, 0.6, snow_factor);  // snow is smoother
-	} else if (biome == 5) {
+		roughness = mix(0.9, 0.6, snow_factor);
+	} else if (biome == 14) {
 		// HIGHLAND — grass on flat tops, rock on steep sides.
 		vec3 grass = GRASS_COLOR + (large_noise - 0.5) * 0.04;
 		float grass_factor = smoothstep(0.5, 0.8, slope);
 		color = mix(rock, grass, grass_factor);
 		roughness = mix(0.9, 0.85, grass_factor);
+	} else if (biome == 11 || biome == 12) {
+		// BOREAL / TUNDRA — dark rock, sparse lichen on flat.
+		vec3 lichen = vec3(0.35, 0.38, 0.28);
+		float lichen_factor = smoothstep(0.55, 0.8, slope) * large_noise * 0.5;
+		color = mix(rock, lichen, lichen_factor);
+		roughness = 0.92;
 	} else {
 		// Generic mountain — rock with subtle moss on flat surfaces.
 		vec3 moss = vec3(0.28, 0.32, 0.22);
@@ -154,4 +158,5 @@ void fragment() {
 	ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));
 	ROUGHNESS = roughness;
 	METALLIC  = 0.0;
+	} // else (normal mode)
 }

@@ -115,7 +115,11 @@ public:
     // Overlay system: switch view mode and rewrite .w on all loaded chunks.
     void setViewMode(ViewMode mode, const OverlayFunc& overlayFunc);
 
+    // Re-read tile data and update INSTANCE_CUSTOM on all loaded chunks.
+    void refreshAllInstances();
+
     const TileData& getTile(i32 index) const { return tiles[index]; }
+    TileData* getTilesPtr() { return tiles.get(); }
 
 private:
     std::unordered_map<godot::Vector2i, Chunk> loadedChunks;

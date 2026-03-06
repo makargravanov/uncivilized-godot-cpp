@@ -10,6 +10,7 @@
 #include <future>
 
 #include <godot_cpp/classes/node.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
 
 namespace godot {
     class MultiMeshInstance3D;
@@ -32,6 +33,15 @@ public:
 
     // Overlay system — call from GDScript: play_scene.set_view_mode(0..4)
     void set_view_mode(int mode);
+
+    // Tile inspection: returns biome, temperature, precipitation, elevation, coords.
+    godot::Dictionary get_tile_info(float world_x, float world_z);
+
+    // Advance simulation by one turn (1/48 year).
+    void advance_turn();
+
+    // Climate diagnostics: energy balance, T stats, ice fraction, etc.
+    godot::Dictionary get_climate_metrics();
 
 private:
     MapManager* mapManager = nullptr;

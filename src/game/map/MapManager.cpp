@@ -258,3 +258,27 @@ void MapManager::setViewMode(ViewMode mode, const OverlayFunc& overlayFunc) {
     }
 }
 
+void MapManager::refreshAllInstances() {
+    for (auto& [chunkPos, chunk] : loadedChunks) {
+        for (auto& [relief, meshData] : chunk.meshes) {
+            if (!meshData.multiMesh.is_valid()) continue;
+
+            for (i32 i = 0; i < static_cast<i32>(meshData.tileIndices.size()); ++i) {
+                const i32 tileIdx = meshData.tileIndices[i];
+                const auto& tile = tiles[tileIdx];
+
+                f32 overlayVal = 0.0f;
+                if (currentViewMode != VIEW_NORMAL && currentOverlayFunc) {
+                    overlayVal = currentOverlayFunc(tileIdx);
+                }
+
+                meshData.multiMesh->set_instance_custom_data(i,
+                    godot::Color(
+                        static_cast<f32>(tile.biome),
+                        static_cast<f32>(tile.river_edges),
+                        static_cast<f32>(tile.features),
+                        overlayVal));
+            }
+        }
+    }
+}
