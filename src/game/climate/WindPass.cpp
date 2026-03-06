@@ -33,7 +33,10 @@ constexpr f32 TILE_STEP_X = 173.205078f / 100.0f;
 constexpr f32 TILE_STEP_Z = 150.0f / 100.0f;
 constexpr f32 OROGRAPHIC_DRAG_FACTOR = 1.8f;
 constexpr f32 MAX_OROGRAPHIC_DRAG = 0.7f;
+constexpr f32 OROGRAPHIC_DEFLECTION_FACTOR = 2.4f;
+constexpr f32 MAX_OROGRAPHIC_DEFLECTION = 0.6f;
 constexpr f32 MIN_WIND_SPEED_MPS = 1e-3f;
+constexpr f32 MIN_GRADIENT_MAGNITUDE = 1e-4f;
 
 constexpr f32 EPSILON_LATITUDE = 1e-4f;
 
@@ -113,6 +116,10 @@ f32 computeAltitudeGradientZ(const ClimateState& climateState, const u32 column,
     return (nextHeight - previousHeight) / (2.0f * TILE_STEP_Z);
 }
 
+f32 vectorLength(const f32 x, const f32 z) {
+    return std::sqrt(x * x + z * z);
+}
+
 void applyLatitudeCirculation(ClimateState& climateState) {
     if (!climateState.windEastMps || !climateState.windNorthMps || !climateState.latitudeRadians) {
         return;
@@ -190,14 +197,72 @@ void applyOrographicDrag(ClimateState& climateState) {
     }
 }
 
+void applyOrographicDeflection(ClimateState& climateState) {
+    if (!climateState.windEastMps || !climateState.windNorthMps || !climateState.relativeAltitude) {
+        return;
+    }
+
+    for (u32 row = 0; row < climateState.gridHeight; ++row) {
+        for (u32 column = 0; column < climateState.gridWidth; ++column) {
+            const u32 index = row * climateState.gridWidth + column;
+            const f32 windEast = climateState.windEastMps[index];
+            const f32 windNorth = climateState.windNorthMps[index];
+            const f32 windSpeed = vectorLength(windEast, windNorth);
+            if (windSpeed < MIN_WIND_SPEED_MPS) {
+                continue;
+            }
+
+            const f32 gradientEast = computeAltitudeGradientX(climateState, column, row);
+            const f32 gradientNorth = computeAltitudeGradientZ(climateState, column, row);
+            const f32 gradientMagnitude = vectorLength(gradientEast, gradientNorth);
+            if (gradientMagnitude < MIN_GRADIENT_MAGNITUDE) {
+                continue;
+            }
+
+            const f32 directionEast = windEast / windSpeed;
+            const f32 directionNorth = windNorth / windSpeed;
+            const f32 upslope = std::max(
+                0.0f,
+                gradientEast * directionEast + gradientNorth * directionNorth);
+            if (upslope <= 0.0f) {
+                continue;
+            }
+
+            f32 tangentEast = -gradientNorth / gradientMagnitude;
+            f32 tangentNorth = gradientEast / gradientMagnitude;
+            const f32 tangentAlignment = tangentEast * directionEast + tangentNorth * directionNorth;
+            if (tangentAlignment < 0.0f) {
+                tangentEast = -tangentEast;
+                tangentNorth = -tangentNorth;
+            }
+
+            const f32 deflection = std::clamp(
+                upslope * OROGRAPHIC_DEFLECTION_FACTOR,
+                0.0f,
+                MAX_OROGRAPHIC_DEFLECTION);
+            const f32 blendedEast = directionEast * (1.0f - deflection) + tangentEast * deflection;
+            const f32 blendedNorth = directionNorth * (1.0f - deflection) + tangentNorth * deflection;
+            const f32 blendedMagnitude = vectorLength(blendedEast, blendedNorth);
+            if (blendedMagnitude < MIN_WIND_SPEED_MPS) {
+                continue;
+            }
+
+            climateState.windEastMps[index] = windSpeed * blendedEast / blendedMagnitude;
+            climateState.windNorthMps[index] = windSpeed * blendedNorth / blendedMagnitude;
+        }
+    }
+}
+
 } // namespace
 
 void WindPass::initialize(ClimateState& climateState) {
     applyLatitudeCirculation(climateState);
     applyOrographicDrag(climateState);
+    applyOrographicDeflection(climateState);
 }
 
 void WindPass::advanceOneTurn(ClimateState& climateState) {
     applyLatitudeCirculation(climateState);
     applyOrographicDrag(climateState);
+    applyOrographicDeflection(climateState);
 }
