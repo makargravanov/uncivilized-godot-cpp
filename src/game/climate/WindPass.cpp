@@ -29,6 +29,12 @@ constexpr f32 TRADE_WIND_MERIDIONAL_MPS = 3.5f;
 constexpr f32 WESTERLY_WIND_MERIDIONAL_MPS = 2.75f;
 constexpr f32 POLAR_EASTERLY_WIND_MERIDIONAL_MPS = 1.75f;
 
+constexpr f32 TILE_STEP_X = 173.205078f / 100.0f;
+constexpr f32 TILE_STEP_Z = 150.0f / 100.0f;
+constexpr f32 OROGRAPHIC_DRAG_FACTOR = 1.8f;
+constexpr f32 MAX_OROGRAPHIC_DRAG = 0.7f;
+constexpr f32 MIN_WIND_SPEED_MPS = 1e-3f;
+
 constexpr f32 EPSILON_LATITUDE = 1e-4f;
 
 f32 smoothStep(const f32 edge0, const f32 edge1, const f32 value) {
@@ -62,6 +68,49 @@ f32 getHemisphereSign(const f32 latitudeRadians) {
 f32 getSeasonalLatitudeShift(const f32 yearFraction) {
     // Shift the circulation belts as a simple proxy for seasonal ITCZ migration.
     return std::sin(static_cast<f32>(yearFraction * Astro::TWO_PI)) * MAX_SEASONAL_SHIFT_RADIANS;
+}
+
+u32 wrapColumn(const i32 column, const u32 width) {
+    const i32 wrapped = column % static_cast<i32>(width);
+    return static_cast<u32>(wrapped < 0 ? wrapped + static_cast<i32>(width) : wrapped);
+}
+
+u32 clampRow(const i32 row, const u32 height) {
+    return static_cast<u32>(std::clamp(row, 0, static_cast<i32>(height - 1)));
+}
+
+f32 sampleRelativeAltitude(const ClimateState& climateState, const i32 column, const i32 row) {
+    const u32 wrappedColumn = wrapColumn(column, climateState.gridWidth);
+    const u32 clampedRow = clampRow(row, climateState.gridHeight);
+    const u32 index = clampedRow * climateState.gridWidth + wrappedColumn;
+    return climateState.relativeAltitude[index];
+}
+
+f32 computeAltitudeGradientX(const ClimateState& climateState, const u32 column, const u32 row) {
+    const f32 leftHeight = sampleRelativeAltitude(climateState, static_cast<i32>(column) - 1, static_cast<i32>(row));
+    const f32 rightHeight = sampleRelativeAltitude(climateState, static_cast<i32>(column) + 1, static_cast<i32>(row));
+    return (rightHeight - leftHeight) / (2.0f * TILE_STEP_X);
+}
+
+f32 computeAltitudeGradientZ(const ClimateState& climateState, const u32 column, const u32 row) {
+    const i32 signedColumn = static_cast<i32>(column);
+    const i32 signedRow = static_cast<i32>(row);
+
+    if (row == 0) {
+        const f32 currentHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow);
+        const f32 nextHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow + 1);
+        return (nextHeight - currentHeight) / TILE_STEP_Z;
+    }
+
+    if (row + 1 >= climateState.gridHeight) {
+        const f32 currentHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow);
+        const f32 previousHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow - 1);
+        return (currentHeight - previousHeight) / TILE_STEP_Z;
+    }
+
+    const f32 previousHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow - 1);
+    const f32 nextHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow + 1);
+    return (nextHeight - previousHeight) / (2.0f * TILE_STEP_Z);
 }
 
 void applyLatitudeCirculation(ClimateState& climateState) {
@@ -108,12 +157,47 @@ void applyLatitudeCirculation(ClimateState& climateState) {
     }
 }
 
+void applyOrographicDrag(ClimateState& climateState) {
+    if (!climateState.windEastMps || !climateState.windNorthMps || !climateState.relativeAltitude) {
+        return;
+    }
+
+    for (u32 row = 0; row < climateState.gridHeight; ++row) {
+        for (u32 column = 0; column < climateState.gridWidth; ++column) {
+            const u32 index = row * climateState.gridWidth + column;
+            const f32 windEast = climateState.windEastMps[index];
+            const f32 windNorth = climateState.windNorthMps[index];
+            const f32 windSpeed = std::sqrt(windEast * windEast + windNorth * windNorth);
+            if (windSpeed < MIN_WIND_SPEED_MPS) {
+                continue;
+            }
+
+            const f32 gradientEast = computeAltitudeGradientX(climateState, column, row);
+            const f32 gradientNorth = computeAltitudeGradientZ(climateState, column, row);
+            const f32 directionEast = windEast / windSpeed;
+            const f32 directionNorth = windNorth / windSpeed;
+
+            // Positive dot product means the wind is climbing into higher terrain.
+            const f32 upslope = std::max(
+                0.0f,
+                gradientEast * directionEast + gradientNorth * directionNorth);
+            const f32 drag = std::clamp(upslope * OROGRAPHIC_DRAG_FACTOR, 0.0f, MAX_OROGRAPHIC_DRAG);
+            const f32 retainedWindFactor = 1.0f - drag;
+
+            climateState.windEastMps[index] = windEast * retainedWindFactor;
+            climateState.windNorthMps[index] = windNorth * retainedWindFactor;
+        }
+    }
+}
+
 } // namespace
 
 void WindPass::initialize(ClimateState& climateState) {
     applyLatitudeCirculation(climateState);
+    applyOrographicDrag(climateState);
 }
 
 void WindPass::advanceOneTurn(ClimateState& climateState) {
     applyLatitudeCirculation(climateState);
+    applyOrographicDrag(climateState);
 }
