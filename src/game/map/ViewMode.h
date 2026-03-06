@@ -7,14 +7,15 @@
 
 #include "util/declarations.h"
 
-// Visual overlay modes for map inspection.
-// Matches the uniform int view_mode in tile shaders.
+// Visual map inspection modes.
+// Tile shaders currently use 0..4; higher values can be handled by separate debug geometry.
 enum ViewMode : u8 {
     VIEW_NORMAL      = 0,  // Default biome/terrain rendering
     VIEW_TEMPERATURE = 1,  // Blue (cold) → Red (hot)
     VIEW_MOISTURE    = 2,  // Brown (dry) → Blue (wet)
     VIEW_ELEVATION   = 3,  // Green (low) → White (high)
     VIEW_BIOME       = 4,  // Distinct colour per biome ID
+    VIEW_WIND        = 5,  // Debug wind vectors
     VIEW_MODE_COUNT
 };
 

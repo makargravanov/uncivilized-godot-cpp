@@ -7,8 +7,12 @@
 
 #include "util/declarations.h"
 #include "game/map/ViewMode.h"
+#include "util/GodotPtr.h"
 #include <future>
 
+#include <godot_cpp/classes/immediate_mesh.hpp>
+#include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/standard_material3d.hpp>
 #include <godot_cpp/classes/node.hpp>
 
 namespace godot {
@@ -30,11 +34,19 @@ public:
     void addISM(godot::MultiMeshInstance3D* meshInstance);
     void removeISM(godot::MultiMeshInstance3D* meshInstance);
 
-    // Overlay system — call from GDScript: play_scene.set_view_mode(0..4)
+    // Overlay system — call from GDScript: play_scene.set_view_mode(...)
     void set_view_mode(int mode);
 
 private:
+    void ensureWindDebugNode();
+    void refreshWindDebugView();
+    void setWindDebugVisible(bool visible);
+
     MapManager* mapManager = nullptr;
+    ViewMode currentViewMode = VIEW_NORMAL;
+    GodotPtr<godot::MeshInstance3D> windDebugInstance;
+    godot::Ref<godot::ImmediateMesh> windDebugMesh;
+    godot::Ref<godot::StandardMaterial3D> windDebugMaterial;
 };
 
 
