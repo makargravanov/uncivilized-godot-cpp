@@ -20,15 +20,15 @@
 
 namespace {
 
-constexpr i32 WIND_DEBUG_STRIDE = 4;
-constexpr f32 WIND_DEBUG_BASE_HEIGHT = 0.24f;
-constexpr f32 WIND_DEBUG_HILL_HEIGHT = 0.42f;
-constexpr f32 WIND_DEBUG_MOUNTAIN_HEIGHT = 0.7f;
-constexpr f32 WIND_DEBUG_SCALE = 0.085f;
-constexpr f32 WIND_DEBUG_MIN_LENGTH = 0.08f;
-constexpr f32 WIND_DEBUG_MAX_LENGTH = 0.62f;
-constexpr f32 WIND_DEBUG_HEAD_LENGTH = 0.18f;
-constexpr f32 WIND_DEBUG_HEAD_WIDTH = 0.11f;
+constexpr i32 WIND_DEBUG_STRIDE = 2;
+constexpr f32 WIND_DEBUG_BASE_HEIGHT = 0.3f;
+constexpr f32 WIND_DEBUG_HILL_HEIGHT = 0.54f;
+constexpr f32 WIND_DEBUG_MOUNTAIN_HEIGHT = 0.92f;
+constexpr f32 WIND_DEBUG_SCALE = 0.12f;
+constexpr f32 WIND_DEBUG_MIN_LENGTH = 0.12f;
+constexpr f32 WIND_DEBUG_MAX_LENGTH = 0.95f;
+constexpr f32 WIND_DEBUG_HEAD_LENGTH = 0.22f;
+constexpr f32 WIND_DEBUG_HEAD_WIDTH = 0.15f;
 constexpr f32 WIND_DEBUG_COLOR_COLD = 0.35f;
 constexpr f32 WIND_DEBUG_COLOR_HOT = 0.95f;
 constexpr f32 WIND_DEBUG_COLOR_ALPHA = 0.95f;
@@ -48,7 +48,7 @@ f32 getWindDebugHeight(const ReliefType relief) {
 }
 
 godot::Color getWindDebugColor(const f32 magnitude) {
-    const f32 normalized = std::clamp(magnitude / 12.0f, 0.0f, 1.0f);
+    const f32 normalized = std::clamp(magnitude / 9.0f, 0.0f, 1.0f);
     return godot::Color(
         0.15f + normalized * 0.75f,
         0.35f + normalized * 0.4f,
@@ -81,10 +81,6 @@ void PlayScene::_process(double delta) {
 }
 void PlayScene::position_updated(const godot::Variant& position) {
     mapManager->positionUpdated(position);
-
-    if (currentViewMode == VIEW_WIND) {
-        refreshWindDebugView();
-    }
 }
 void PlayScene::addISM(godot::MultiMeshInstance3D* meshInstance) {
     add_child(meshInstance);
@@ -139,7 +135,7 @@ void PlayScene::ensureWindDebugNode() {
 
     windDebugMaterial->set_shading_mode(godot::BaseMaterial3D::SHADING_MODE_UNSHADED);
     windDebugMaterial->set_flag(godot::BaseMaterial3D::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-    windDebugMaterial->set_flag(godot::BaseMaterial3D::FLAG_DISABLE_DEPTH_TEST, false);
+    windDebugMaterial->set_flag(godot::BaseMaterial3D::FLAG_DISABLE_DEPTH_TEST, true);
     windDebugMaterial->set_cull_mode(godot::BaseMaterial3D::CULL_DISABLED);
     windDebugMaterial->set_transparency(godot::BaseMaterial3D::TRANSPARENCY_ALPHA);
 
