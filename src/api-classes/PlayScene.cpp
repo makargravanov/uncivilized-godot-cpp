@@ -5,6 +5,7 @@
 #include "PlayScene.h"
 #include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 
+#include "game/climate/TemperaturePass.h"
 #include "game/SystemNexus.h"
 #include "game/map/ViewMode.h"
 void PlayScene::_bind_methods() {
@@ -42,9 +43,13 @@ void PlayScene::set_view_mode(int mode) {
         mode < 0 ? 0 : (mode >= VIEW_MODE_COUNT ? 0 : mode));
 
     OverlayFunc func;
-    if (viewMode == VIEW_ELEVATION) {
+    if (viewMode == VIEW_TEMPERATURE) {
+        func = [this](i32 tileIndex) -> f32 {
+            const auto& tile = mapManager->getTile(tileIndex);
+            return TemperaturePass::normalizeForOverlay(tile.temperature);
+        };
+    } else if (viewMode == VIEW_ELEVATION) {
         // Demo overlay: use raw biome_id normalized to [0,1] as placeholder.
-        // Will be replaced with real data (temperature, moisture) when ClimateModel exists.
         func = [this](i32 tileIndex) -> f32 {
             const auto& tile = mapManager->getTile(tileIndex);
             return static_cast<f32>(tile.biome) / 6.0f;

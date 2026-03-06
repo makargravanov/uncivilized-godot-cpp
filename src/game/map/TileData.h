@@ -13,9 +13,9 @@
 struct TileData {
     ReliefType   relief;
     BiomeType    biome;
+    i8           temperature = 0;  // Quantized degrees Celsius.
     u8           river_edges = 0;   // 6 bits — one per hex edge (0=N, clockwise)
     FeatureFlags features    = Feature::NONE;
-    // Future: i8  temperature;
     // Future: u8  precipitation;
 };
 

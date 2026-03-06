@@ -5,6 +5,7 @@
 #ifndef SYSTEMNEXUS_H
 #define SYSTEMNEXUS_H
 #include "api-classes/PlayScene.h"
+#include "climate/TemperaturePass.h"
 #include "map/MapManager.h"
 #include "map/BiomeClassifier.h"
 #include "map/elevations-creation/LayerSeparator.h"
@@ -17,6 +18,7 @@ public:
             mapResult.discrete,
             mapResult.mapResult.width,
             mapResult.mapResult.height);
+        TemperaturePass::apply(tiles, mapResult.mapResult);
         mapManager = new MapManager(
             std::move(tiles),
             mapResult.mapResult.width,
