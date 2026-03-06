@@ -14,11 +14,14 @@ struct ClimateState {
     u32 gridHeight = 0;
     u32 tileCount = 0;
 
+    u64 absoluteTurnIndex = 0;
     u32 currentTurnIndex = 0;
     f32 currentYearFraction = 0.0f;
 
     // SoA buffers for the current climate state.
     std::unique_ptr<f32[]> temperatureKelvin;
+    std::unique_ptr<f32[]> windEastMps;
+    std::unique_ptr<f32[]> windNorthMps;
 
     // Minimal static inputs needed by the temperature model.
     std::unique_ptr<f32[]> latitudeRadians;
@@ -31,6 +34,8 @@ struct ClimateState {
           gridHeight(height),
           tileCount(width * height),
           temperatureKelvin(std::make_unique<f32[]>(tileCount)),
+                    windEastMps(std::make_unique<f32[]>(tileCount)),
+                    windNorthMps(std::make_unique<f32[]>(tileCount)),
           latitudeRadians(std::make_unique<f32[]>(tileCount)),
           relativeAltitude(std::make_unique<f32[]>(tileCount)) {}
 

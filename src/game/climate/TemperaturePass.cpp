@@ -59,6 +59,7 @@ ClimateState TemperaturePass::createInitialState(const MapResult& mapResult) {
         }
     }
 
+    climateState.absoluteTurnIndex = 0;
     climateState.currentTurnIndex = 0;
     climateState.currentYearFraction = 0.0f;
     blendTowardTurnTarget(climateState, 0, 1.0f);
@@ -73,6 +74,7 @@ void TemperaturePass::advanceOneTurn(ClimateState& climateState) {
 
     const u32 nextTurn = (climateState.currentTurnIndex + 1) % Astro::DEFAULT_YEAR_TURN_COUNT;
     blendTowardTurnTarget(climateState, nextTurn, TURN_RELAXATION_FACTOR);
+    ++climateState.absoluteTurnIndex;
     climateState.currentTurnIndex = nextTurn;
     climateState.currentYearFraction =
         static_cast<f32>(nextTurn) / static_cast<f32>(Astro::DEFAULT_YEAR_TURN_COUNT);
