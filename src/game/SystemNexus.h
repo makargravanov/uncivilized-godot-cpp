@@ -4,7 +4,11 @@
 
 #ifndef SYSTEMNEXUS_H
 #define SYSTEMNEXUS_H
+
+#include <memory>
+
 #include "api-classes/PlayScene.h"
+#include "climate/ClimateState.h"
 #include "climate/TemperaturePass.h"
 #include "map/MapManager.h"
 #include "map/BiomeClassifier.h"
@@ -18,7 +22,11 @@ public:
             mapResult.discrete,
             mapResult.mapResult.width,
             mapResult.mapResult.height);
-        TemperaturePass::apply(tiles, mapResult.mapResult);
+
+        climateState = std::make_unique<ClimateState>(
+            TemperaturePass::createInitialState(mapResult.mapResult));
+        TemperaturePass::publishToTiles(*climateState, tiles);
+
         mapManager = new MapManager(
             std::move(tiles),
             mapResult.mapResult.width,
@@ -26,6 +34,19 @@ public:
     }
     static MapManager* getMapManager() {
         return mapManager;
+    }
+
+    static ClimateState* getClimateState() {
+        return climateState.get();
+    }
+
+    static void advanceTemperatureTurn() {
+        if (!climateState || !mapManager) {
+            return;
+        }
+
+        TemperaturePass::advanceOneTurn(*climateState);
+        mapManager->updateTemperatureSnapshot(*climateState);
     }
 
     static void regPlayScene(PlayScene* p) {
@@ -37,10 +58,13 @@ public:
 
     static void finalize() {
         delete mapManager;
+        mapManager = nullptr;
+        climateState.reset();
     }
 
 private:
     static MapManager* mapManager;
+    static std::unique_ptr<ClimateState> climateState;
     static PlayScene* play;
 };
 

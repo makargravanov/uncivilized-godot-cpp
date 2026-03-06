@@ -5,4 +5,5 @@
 #include "SystemNexus.h"
 
 MapManager* SystemNexus::mapManager = nullptr;
+std::unique_ptr<ClimateState> SystemNexus::climateState = nullptr;
 PlayScene* SystemNexus::play = nullptr;

@@ -5,6 +5,8 @@
 #include "MapManager.h"
 
 #include <cmath>
+
+#include "game/climate/TemperaturePass.h"
 #include "game/SystemNexus.h"
 
 f32 MapManager::tileHorizontalOffset   = 173.205078 / 100;
@@ -255,6 +257,14 @@ void MapManager::setViewMode(ViewMode mode, const OverlayFunc& overlayFunc) {
                 }
             }
         }
+    }
+}
+
+void MapManager::updateTemperatureSnapshot(const ClimateState& climateState) {
+    TemperaturePass::publishToTiles(climateState, tiles);
+
+    if (currentViewMode == VIEW_TEMPERATURE && currentOverlayFunc) {
+        setViewMode(currentViewMode, currentOverlayFunc);
     }
 }
 

@@ -45,6 +45,11 @@ void PlayScene::set_view_mode(int mode) {
     OverlayFunc func;
     if (viewMode == VIEW_TEMPERATURE) {
         func = [this](i32 tileIndex) -> f32 {
+            if (const ClimateState* climateState = SystemNexus::getClimateState();
+                climateState && climateState->temperatureKelvin) {
+                return TemperaturePass::normalizeKelvinForOverlay(climateState->temperatureKelvin[tileIndex]);
+            }
+
             const auto& tile = mapManager->getTile(tileIndex);
             return TemperaturePass::normalizeForOverlay(tile.temperature);
         };

@@ -90,6 +90,8 @@ struct Chunk {
     );
 };
 
+struct ClimateState;
+
 // Callback: given a tile index, return the overlay value [0,1] for current ViewMode.
 using OverlayFunc = std::function<f32(i32 tileIndex)>;
 
@@ -114,6 +116,7 @@ public:
 
     // Overlay system: switch view mode and rewrite .w on all loaded chunks.
     void setViewMode(ViewMode mode, const OverlayFunc& overlayFunc);
+    void updateTemperatureSnapshot(const ClimateState& climateState);
 
     const TileData& getTile(i32 index) const { return tiles[index]; }
 
