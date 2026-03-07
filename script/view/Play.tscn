@@ -42,7 +42,6 @@ offset_left = 16.0
 offset_top = 44.0
 offset_right = 300.0
 offset_bottom = 68.0
-text = ""
 
 [node name="TileInfoLabel" type="Label" parent="CanvasLayer"]
 anchors_preset = 3

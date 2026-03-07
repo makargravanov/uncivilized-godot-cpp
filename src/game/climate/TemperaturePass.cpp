@@ -21,7 +21,6 @@ constexpr f32 POLAR_SEA_LEVEL_TEMPERATURE_K = KELVIN_OFFSET - 22.0f;
 constexpr f32 EQUATOR_SEA_LEVEL_TEMPERATURE_K = KELVIN_OFFSET + 32.0f;
 constexpr f32 MAX_ALTITUDE_COOLING_K = 38.0f;
 constexpr f32 TURN_RELAXATION_FACTOR = 0.35f;
-constexpr f64 POLE_LATITUDE_OFFSET = 1e-4;
 constexpr f32 MIN_HEIGHT_RANGE = 1e-6f;
 
 } // namespace
@@ -98,19 +97,20 @@ void TemperaturePass::blendTowardTurnTarget(ClimateState& climateState, const u3
     const u32 turnStart = turnIndex % Astro::DEFAULT_YEAR_TURN_COUNT;
     const u32 turnEnd = turnStart + 1;
 
-    const f64 poleInsolation = Astro::Astrophysics::calculateAverageInsolationForTurnRange(
-        Astro::HALF_PI - POLE_LATITUDE_OFFSET,
-        turnStart,
-        turnEnd,
-        starParams,
-        orbitalParams);
-    const f64 equatorInsolation = Astro::Astrophysics::calculateAverageInsolationForTurnRange(
-        0.0,
-        turnStart,
-        turnEnd,
-        starParams,
-        orbitalParams);
-    const f64 insolationRange = std::max(equatorInsolation - poleInsolation, static_cast<f64>(MIN_HEIGHT_RANGE));
+    // Sample insolation at several latitudes to find the actual min/max for this turn.
+    // During polar summer the pole can receive MORE insolation than the equator,
+    // so we cannot assume pole=min, equator=max.
+    constexpr u32 LATITUDE_SAMPLE_COUNT = 19;  // every 10° from -90 to +90
+    f64 minInsolation = 1e18;
+    f64 maxInsolation = -1e18;
+    for (u32 s = 0; s < LATITUDE_SAMPLE_COUNT; ++s) {
+        const f64 sampleLatitude = -Astro::HALF_PI + s * (Astro::PI / (LATITUDE_SAMPLE_COUNT - 1));
+        const f64 sampleInsolation = Astro::Astrophysics::calculateAverageInsolationForTurnRange(
+            sampleLatitude, turnStart, turnEnd, starParams, orbitalParams);
+        minInsolation = std::min(minInsolation, sampleInsolation);
+        maxInsolation = std::max(maxInsolation, sampleInsolation);
+    }
+    const f64 insolationRange = std::max(maxInsolation - minInsolation, static_cast<f64>(MIN_HEIGHT_RANGE));
 
     for (u32 index = 0; index < climateState.tileCount; ++index) {
         const f64 intervalInsolation = Astro::Astrophysics::calculateAverageInsolationForTurnRange(
@@ -120,7 +120,7 @@ void TemperaturePass::blendTowardTurnTarget(ClimateState& climateState, const u3
             starParams,
             orbitalParams);
         const f32 normalizedInsolation = static_cast<f32>(std::clamp(
-            (intervalInsolation - poleInsolation) / insolationRange,
+            (intervalInsolation - minInsolation) / insolationRange,
             0.0,
             1.0));
 

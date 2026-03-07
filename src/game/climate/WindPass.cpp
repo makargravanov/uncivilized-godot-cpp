@@ -11,7 +11,9 @@
 
 namespace {
 
-constexpr f32 MAX_SEASONAL_SHIFT_RADIANS = static_cast<f32>(8.0 * Astro::DEG_TO_RAD);
+// The ITCZ tracks the subsolar point (solar declination) but with damping.
+// At Earth-like obliquity ~23°, observed ITCZ shift is ~8°, giving a ratio ~0.35.
+constexpr f32 ITCZ_DECLINATION_TRACKING_FRACTION = 0.35f;
 constexpr f32 CALM_EQUATOR_RADIANS = static_cast<f32>(6.0 * Astro::DEG_TO_RAD);
 constexpr f32 BAND_FADE_RADIANS = static_cast<f32>(7.0 * Astro::DEG_TO_RAD);
 constexpr f32 TRADE_BAND_START_RADIANS = static_cast<f32>(4.0 * Astro::DEG_TO_RAD);
@@ -69,8 +71,10 @@ f32 getHemisphereSign(const f32 latitudeRadians) {
 }
 
 f32 getSeasonalLatitudeShift(const f32 yearFraction) {
-    // Shift the circulation belts as a simple proxy for seasonal ITCZ migration.
-    return std::sin(static_cast<f32>(yearFraction * Astro::TWO_PI)) * MAX_SEASONAL_SHIFT_RADIANS;
+    const Astro::OrbitalParams orbitalParams;
+    const auto orbitState = Astro::Astrophysics::calculateOrbitStateByYearFraction(
+        orbitalParams, static_cast<f64>(yearFraction));
+    return static_cast<f32>(orbitState.declination) * ITCZ_DECLINATION_TRACKING_FRACTION;
 }
 
 u32 wrapColumn(const i32 column, const u32 width) {
@@ -180,7 +184,9 @@ void applyOrographicDrag(ClimateState& climateState) {
             }
 
             const f32 gradientEast = computeAltitudeGradientX(climateState, column, row);
-            const f32 gradientNorth = computeAltitudeGradientZ(climateState, column, row);
+            // computeAltitudeGradientZ returns gradient in +row (south) direction;
+            // negate to get the northward gradient matching windNorth convention.
+            const f32 gradientNorth = -computeAltitudeGradientZ(climateState, column, row);
             const f32 directionEast = windEast / windSpeed;
             const f32 directionNorth = windNorth / windSpeed;
 
@@ -213,7 +219,7 @@ void applyOrographicDeflection(ClimateState& climateState) {
             }
 
             const f32 gradientEast = computeAltitudeGradientX(climateState, column, row);
-            const f32 gradientNorth = computeAltitudeGradientZ(climateState, column, row);
+            const f32 gradientNorth = -computeAltitudeGradientZ(climateState, column, row);
             const f32 gradientMagnitude = vectorLength(gradientEast, gradientNorth);
             if (gradientMagnitude < MIN_GRADIENT_MAGNITUDE) {
                 continue;

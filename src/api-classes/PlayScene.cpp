@@ -264,7 +264,8 @@ void PlayScene::refreshWindDebugView() {
                 tileTransform.origin.z);
 
             const f32 clampedLength = std::clamp(magnitude * WIND_DEBUG_SCALE, WIND_DEBUG_MIN_LENGTH, WIND_DEBUG_MAX_LENGTH);
-            const godot::Vector3 direction(windEast / magnitude, 0.0f, windNorth / magnitude);
+            // +Z is south in world coords, but windNorth > 0 means northward → negate.
+            const godot::Vector3 direction(windEast / magnitude, 0.0f, -windNorth / magnitude);
             const godot::Vector3 tip = origin + direction * clampedLength;
             const godot::Vector3 perpendicular(-direction.z, 0.0f, direction.x);
             const godot::Vector3 headBase = tip - direction * (clampedLength * WIND_DEBUG_HEAD_LENGTH);
