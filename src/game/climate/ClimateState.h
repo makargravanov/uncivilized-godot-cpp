@@ -5,11 +5,24 @@
 #ifndef CLIMATESTATE_H
 #define CLIMATESTATE_H
 
+#include <cstring>
 #include <memory>
 
 #include "util/declarations.h"
 
 struct ClimateState {
+private:
+    static std::unique_ptr<f32[]> copyBuffer(const std::unique_ptr<f32[]>& source, const u32 count) {
+        if (!source || count == 0) {
+            return nullptr;
+        }
+
+        auto destination = std::make_unique<f32[]>(count);
+        std::memcpy(destination.get(), source.get(), count * sizeof(f32));
+        return destination;
+    }
+
+public:
     u32 gridWidth = 0;
     u32 gridHeight = 0;
     u32 tileCount = 0;
@@ -45,8 +58,46 @@ struct ClimateState {
           latitudeRadians(std::make_unique<f32[]>(tileCount)),
           relativeAltitude(std::make_unique<f32[]>(tileCount)) {}
 
-    ClimateState(const ClimateState&) = delete;
-    ClimateState& operator=(const ClimateState&) = delete;
+    ClimateState(const ClimateState& other)
+        : gridWidth(other.gridWidth),
+          gridHeight(other.gridHeight),
+          tileCount(other.tileCount),
+          absoluteTurnIndex(other.absoluteTurnIndex),
+          currentTurnIndex(other.currentTurnIndex),
+          currentYearFraction(other.currentYearFraction),
+          temperatureKelvin(copyBuffer(other.temperatureKelvin, other.tileCount)),
+          windEastMps(copyBuffer(other.windEastMps, other.tileCount)),
+          windNorthMps(copyBuffer(other.windNorthMps, other.tileCount)),
+          humidityKgPerKg(copyBuffer(other.humidityKgPerKg, other.tileCount)),
+          turnPrecipitation(copyBuffer(other.turnPrecipitation, other.tileCount)),
+          annualPrecipitationAccumulator(copyBuffer(other.annualPrecipitationAccumulator, other.tileCount)),
+          latitudeRadians(copyBuffer(other.latitudeRadians, other.tileCount)),
+          relativeAltitude(copyBuffer(other.relativeAltitude, other.tileCount)) {}
+
+    ClimateState& operator=(const ClimateState& other) {
+        if (this == &other) {
+            return *this;
+        }
+
+        gridWidth = other.gridWidth;
+        gridHeight = other.gridHeight;
+        tileCount = other.tileCount;
+        absoluteTurnIndex = other.absoluteTurnIndex;
+        currentTurnIndex = other.currentTurnIndex;
+        currentYearFraction = other.currentYearFraction;
+
+        temperatureKelvin = copyBuffer(other.temperatureKelvin, other.tileCount);
+        windEastMps = copyBuffer(other.windEastMps, other.tileCount);
+        windNorthMps = copyBuffer(other.windNorthMps, other.tileCount);
+        humidityKgPerKg = copyBuffer(other.humidityKgPerKg, other.tileCount);
+        turnPrecipitation = copyBuffer(other.turnPrecipitation, other.tileCount);
+        annualPrecipitationAccumulator = copyBuffer(other.annualPrecipitationAccumulator, other.tileCount);
+        latitudeRadians = copyBuffer(other.latitudeRadians, other.tileCount);
+        relativeAltitude = copyBuffer(other.relativeAltitude, other.tileCount);
+
+        return *this;
+    }
+
     ClimateState(ClimateState&&) noexcept = default;
     ClimateState& operator=(ClimateState&&) noexcept = default;
 };

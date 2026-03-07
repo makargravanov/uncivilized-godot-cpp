@@ -61,7 +61,7 @@ func _unhandled_key_input(event: InputEvent):
 func _process(_delta: float):
 	if Input.is_key_pressed(KEY_SPACE):
 		playScene.advance_climate_turn()
-		_updateTurnLabel()
+	_updateTurnLabel()
 
 func _unhandled_input(event: InputEvent):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -113,9 +113,8 @@ func _updateLabel(mode: int):
 
 func _updateTurnLabel():
 	if turnLabel:
-		# Read turn info from a clicked tile's info (any tile works, turn is global)
-		var info: Dictionary = playScene.get_tile_info_at(0.0, 0.0)
-		if info.has("turn"):
-			turnLabel.text = "Ход: %d" % info.get("turn", 0)
+		var turn: int = playScene.get_current_turn()
+		if playScene.is_climate_turn_in_progress():
+			turnLabel.text = "Ход: %d (считается...)" % turn
 		else:
-			turnLabel.text = ""
+			turnLabel.text = "Ход: %d" % turn

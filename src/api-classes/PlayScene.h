@@ -41,8 +41,10 @@ public:
     // Returns tile info at world (x, z) or empty dict if out of bounds.
     godot::Dictionary get_tile_info_at(float worldX, float worldZ);
 
-    // Advance the climate simulation by one turn and refresh the current overlay.
+    // Start computing the next climate turn in the background if no turn is pending.
     void advance_climate_turn();
+    bool is_climate_turn_in_progress() const;
+    int get_current_turn() const;
 
 private:
     void ensureWindDebugNode();

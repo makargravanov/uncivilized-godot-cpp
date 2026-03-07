@@ -63,6 +63,8 @@ void PlayScene::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_view_mode", "mode"), &PlayScene::set_view_mode);
     godot::ClassDB::bind_method(godot::D_METHOD("get_tile_info_at", "worldX", "worldZ"), &PlayScene::get_tile_info_at);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_climate_turn"), &PlayScene::advance_climate_turn);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_climate_turn_in_progress"), &PlayScene::is_climate_turn_in_progress);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_current_turn"), &PlayScene::get_current_turn);
 }
 void PlayScene::_ready() {
     Node::_ready();
@@ -81,6 +83,10 @@ void PlayScene::_ready() {
 }
 void PlayScene::_process(double delta) {
     Node::_process(delta);
+
+    if (SystemNexus::applyCompletedClimateTurn()) {
+        set_view_mode(static_cast<int>(currentViewMode));
+    }
 }
 void PlayScene::position_updated(const godot::Variant& position) {
     mapManager->positionUpdated(position);
@@ -146,9 +152,15 @@ void PlayScene::set_view_mode(int mode) {
 }
 
 void PlayScene::advance_climate_turn() {
-    SystemNexus::advanceClimateTurn();
-    // Refresh the current overlay so the user sees the updated data.
-    set_view_mode(static_cast<int>(currentViewMode));
+    SystemNexus::requestClimateTurnAsync();
+}
+
+bool PlayScene::is_climate_turn_in_progress() const {
+    return SystemNexus::isClimateTurnInProgress();
+}
+
+int PlayScene::get_current_turn() const {
+    return static_cast<int>(SystemNexus::currentClimateTurn());
 }
 
 godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float worldZ) {

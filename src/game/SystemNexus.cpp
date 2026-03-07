@@ -6,4 +6,6 @@
 
 MapManager* SystemNexus::mapManager = nullptr;
 std::unique_ptr<ClimateState> SystemNexus::climateState = nullptr;
+std::future<ClimateState> SystemNexus::pendingClimateTurn;
+bool SystemNexus::climateTurnInProgress = false;
 PlayScene* SystemNexus::play = nullptr;
