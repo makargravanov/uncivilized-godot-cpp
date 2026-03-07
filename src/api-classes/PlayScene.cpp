@@ -62,6 +62,7 @@ godot::Color getWindDebugColor(const f32 magnitude) {
 void PlayScene::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_view_mode", "mode"), &PlayScene::set_view_mode);
     godot::ClassDB::bind_method(godot::D_METHOD("get_tile_info_at", "worldX", "worldZ"), &PlayScene::get_tile_info_at);
+    godot::ClassDB::bind_method(godot::D_METHOD("advance_climate_turn"), &PlayScene::advance_climate_turn);
 }
 void PlayScene::_ready() {
     Node::_ready();
@@ -116,23 +117,38 @@ void PlayScene::set_view_mode(int mode) {
             }
             return 0.0f;
         };
+    } else if (currentViewMode == VIEW_PRECIPITATION) {
+        func = [](i32 tileIndex) -> f32 {
+            if (const ClimateState* climateState = SystemNexus::getClimateState();
+                climateState && climateState->turnPrecipitation) {
+                return std::clamp(climateState->turnPrecipitation[tileIndex] * 500.0f, 0.0f, 1.0f);
+            }
+            return 0.0f;
+        };
     } else if (currentViewMode == VIEW_ELEVATION) {
         // Demo overlay: use raw biome_id normalized to [0,1] as placeholder.
         func = [this](i32 tileIndex) -> f32 {
             const auto& tile = mapManager->getTile(tileIndex);
             return static_cast<f32>(tile.biome) / 6.0f;
         };
-    } else if (currentViewMode != VIEW_NORMAL && currentViewMode != VIEW_WIND) {
+    } else if (currentViewMode != VIEW_NORMAL && currentViewMode != VIEW_WIND
+               && currentViewMode != VIEW_PRECIPITATION) {
         // Placeholder for future modes — return 0.
         func = [](i32) -> f32 { return 0.0f; };
     }
 
-    const ViewMode tileViewMode = currentViewMode == VIEW_WIND ? VIEW_NORMAL : currentViewMode;
+    const ViewMode tileViewMode = (currentViewMode == VIEW_WIND) ? VIEW_NORMAL : currentViewMode;
     mapManager->setViewMode(tileViewMode, func);
     setWindDebugVisible(currentViewMode == VIEW_WIND);
     if (currentViewMode == VIEW_WIND) {
         refreshWindDebugView();
     }
+}
+
+void PlayScene::advance_climate_turn() {
+    SystemNexus::advanceClimateTurn();
+    // Refresh the current overlay so the user sees the updated data.
+    set_view_mode(static_cast<int>(currentViewMode));
 }
 
 godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float worldZ) {
@@ -158,6 +174,7 @@ godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float wo
     result["temperature_c"] = static_cast<int>(tile.temperature);
 
     if (const ClimateState* cs = SystemNexus::getClimateState(); cs) {
+        result["turn"] = static_cast<int>(cs->absoluteTurnIndex);
         if (cs->temperatureKelvin)
             result["temperature_k"] = cs->temperatureKelvin[tileIndex];
         if (cs->windEastMps && cs->windNorthMps) {

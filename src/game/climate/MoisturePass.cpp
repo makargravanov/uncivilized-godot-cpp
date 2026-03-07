@@ -154,8 +154,6 @@ void applyCondensationAndPrecipitation(ClimateState& climateState) {
         if (excess > 0.0f) {
             climateState.humidityKgPerKg[i] = maxHumidity;
             climateState.turnPrecipitation[i] += excess;
-        } else {
-            climateState.turnPrecipitation[i] = 0.0f;
         }
     }
 }
@@ -200,8 +198,14 @@ void MoisturePass::initialize(ClimateState& climateState) {
         applyCondensationAndPrecipitation(climateState);
     }
 
+    // Clear warmup artifacts, then compute one clean initial precipitation snapshot.
     std::memset(climateState.turnPrecipitation.get(), 0, climateState.tileCount * sizeof(f32));
     std::memset(climateState.annualPrecipitationAccumulator.get(), 0, climateState.tileCount * sizeof(f32));
+
+    applyOceanEvaporation(climateState);
+    advectMoisture(climateState);
+    applyCondensationAndPrecipitation(climateState);
+    accumulateAnnualPrecipitation(climateState);
 }
 
 void MoisturePass::advanceOneTurn(ClimateState& climateState) {

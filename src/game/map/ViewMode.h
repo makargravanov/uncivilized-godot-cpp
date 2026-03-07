@@ -15,7 +15,8 @@ enum ViewMode : u8 {
     VIEW_MOISTURE    = 2,  // Brown (dry) → Blue (wet)
     VIEW_ELEVATION   = 3,  // Green (low) → White (high)
     VIEW_BIOME       = 4,  // Distinct colour per biome ID
-    VIEW_WIND        = 5,  // Debug wind vectors
+    VIEW_WIND          = 5,  // Debug wind vectors
+    VIEW_PRECIPITATION = 6,  // Precipitation heatmap
     VIEW_MODE_COUNT
 };
 

@@ -6,6 +6,7 @@ const VIEW_MOISTURE := 2
 const VIEW_ELEVATION := 3
 const VIEW_BIOME := 4
 const VIEW_WIND := 5
+const VIEW_PRECIPITATION := 6
 
 const VIEW_MODE_KEYS := {
 	KEY_1: VIEW_NORMAL,
@@ -14,6 +15,7 @@ const VIEW_MODE_KEYS := {
 	KEY_4: VIEW_ELEVATION,
 	KEY_5: VIEW_BIOME,
 	KEY_6: VIEW_WIND,
+	KEY_7: VIEW_PRECIPITATION,
 }
 
 const VIEW_MODE_NAMES := {
@@ -23,6 +25,7 @@ const VIEW_MODE_NAMES := {
 	VIEW_ELEVATION: "Высота",
 	VIEW_BIOME: "Биомы",
 	VIEW_WIND: "Ветер",
+	VIEW_PRECIPITATION: "Осадки",
 }
 
 const RELIEF_NAMES := {
@@ -38,17 +41,27 @@ const BIOME_NAMES := {
 @onready var camera: Camera3D = $Camera3D
 @onready var viewModeLabel: Label = $CanvasLayer/ViewModeLabel
 @onready var tileInfoLabel: Label = $CanvasLayer/TileInfoLabel
+@onready var turnLabel: Label = $CanvasLayer/TurnLabel
+
+var _currentViewMode: int = VIEW_NORMAL
 
 func _ready():
 	playScene.set_view_mode(VIEW_NORMAL)
 	_updateLabel(VIEW_NORMAL)
+	_updateTurnLabel()
 
 func _unhandled_key_input(event: InputEvent):
 	if event is InputEventKey and event.pressed and not event.echo:
 		if VIEW_MODE_KEYS.has(event.keycode):
 			var mode: int = VIEW_MODE_KEYS[event.keycode]
+			_currentViewMode = mode
 			playScene.set_view_mode(mode)
 			_updateLabel(mode)
+
+func _process(_delta: float):
+	if Input.is_key_pressed(KEY_SPACE):
+		playScene.advance_climate_turn()
+		_updateTurnLabel()
 
 func _unhandled_input(event: InputEvent):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -97,3 +110,12 @@ func _showTileInfo(info: Dictionary):
 func _updateLabel(mode: int):
 	if viewModeLabel:
 		viewModeLabel.text = VIEW_MODE_NAMES.get(mode, "")
+
+func _updateTurnLabel():
+	if turnLabel:
+		# Read turn info from a clicked tile's info (any tile works, turn is global)
+		var info: Dictionary = playScene.get_tile_info_at(0.0, 0.0)
+		if info.has("turn"):
+			turnLabel.text = "Ход: %d" % info.get("turn", 0)
+		else:
+			turnLabel.text = ""
