@@ -6,25 +6,36 @@ const VIEW_ELEVATION := 3
 const VIEW_BIOME := 4
 const VIEW_WIND := 5
 
+const VIEW_MODE_KEYS := {
+	KEY_1: VIEW_NORMAL,
+	KEY_2: VIEW_TEMPERATURE,
+	KEY_3: VIEW_ELEVATION,
+	KEY_4: VIEW_BIOME,
+	KEY_5: VIEW_WIND,
+}
+
+const VIEW_MODE_NAMES := {
+	VIEW_NORMAL: "Обычный",
+	VIEW_TEMPERATURE: "Температура",
+	VIEW_ELEVATION: "Высота",
+	VIEW_BIOME: "Биомы",
+	VIEW_WIND: "Ветер",
+}
+
 @onready var playScene = $PlayScene
-@onready var viewModeSelect: OptionButton = $CanvasLayer/ViewModePanel/MarginContainer/ViewModeRow/ViewModeSelect
+@onready var viewModeLabel: Label = $CanvasLayer/ViewModeLabel
 
 func _ready():
-	_setupViewModeSelect()
-	_applySelectedViewMode(viewModeSelect.selected)
+	playScene.set_view_mode(VIEW_NORMAL)
+	_updateLabel(VIEW_NORMAL)
 
-func _setupViewModeSelect():
-	viewModeSelect.clear()
-	viewModeSelect.add_item("Обычный", VIEW_NORMAL)
-	viewModeSelect.add_item("Температура", VIEW_TEMPERATURE)
-	viewModeSelect.add_item("Высота", VIEW_ELEVATION)
-	viewModeSelect.add_item("Биомы", VIEW_BIOME)
-	viewModeSelect.add_item("Ветер", VIEW_WIND)
-	viewModeSelect.item_selected.connect(_on_view_mode_selected)
+func _unhandled_key_input(event: InputEvent):
+	if event is InputEventKey and event.pressed and not event.echo:
+		if VIEW_MODE_KEYS.has(event.keycode):
+			var mode: int = VIEW_MODE_KEYS[event.keycode]
+			playScene.set_view_mode(mode)
+			_updateLabel(mode)
 
-func _on_view_mode_selected(index: int):
-	_applySelectedViewMode(index)
-
-func _applySelectedViewMode(index: int):
-	var viewModeId := viewModeSelect.get_item_id(index)
-	playScene.set_view_mode(viewModeId)
+func _updateLabel(mode: int):
+	if viewModeLabel:
+		viewModeLabel.text = VIEW_MODE_NAMES.get(mode, "")
