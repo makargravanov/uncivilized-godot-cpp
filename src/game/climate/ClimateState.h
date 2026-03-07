@@ -12,14 +12,24 @@
 
 struct ClimateState {
 private:
-    static std::unique_ptr<f32[]> copyBuffer(const std::unique_ptr<f32[]>& source, const u32 count) {
+    template <typename T>
+    static std::unique_ptr<T[]> copyBuffer(const std::unique_ptr<T[]>& source, const u32 count) {
         if (!source || count == 0) {
             return nullptr;
         }
 
-        auto destination = std::make_unique<f32[]>(count);
-        std::memcpy(destination.get(), source.get(), count * sizeof(f32));
+        auto destination = std::make_unique<T[]>(count);
+        std::memcpy(destination.get(), source.get(), count * sizeof(T));
         return destination;
+    }
+
+    template <typename T>
+    static std::unique_ptr<T[]> allocateBuffer(const u32 count) {
+        if (count == 0) {
+            return nullptr;
+        }
+
+        return std::make_unique<T[]>(count);
     }
 
 public:
@@ -38,10 +48,17 @@ public:
     std::unique_ptr<f32[]> humidityKgPerKg;
     std::unique_ptr<f32[]> turnPrecipitation;
     std::unique_ptr<f32[]> annualPrecipitationAccumulator;
+    std::unique_ptr<f32[]> humidityScratchKgPerKg;
+    std::unique_ptr<u32[]> moistureUpwindEastIndex;
+    std::unique_ptr<u32[]> moistureUpwindNorthIndex;
+    std::unique_ptr<f32[]> moistureEastWeight;
+    std::unique_ptr<f32[]> moistureNorthWeight;
 
     // Minimal static inputs needed by the temperature model.
     std::unique_ptr<f32[]> latitudeRadians;
     std::unique_ptr<f32[]> relativeAltitude;
+    u32 seaLevelTemperatureTurnCount = 0;
+    std::unique_ptr<f32[]> seaLevelTemperatureByTurnRow;
 
     ClimateState() = default;
 
@@ -55,6 +72,11 @@ public:
           humidityKgPerKg(std::make_unique<f32[]>(tileCount)),
           turnPrecipitation(std::make_unique<f32[]>(tileCount)),
           annualPrecipitationAccumulator(std::make_unique<f32[]>(tileCount)),
+          humidityScratchKgPerKg(std::make_unique<f32[]>(tileCount)),
+          moistureUpwindEastIndex(std::make_unique<u32[]>(tileCount)),
+          moistureUpwindNorthIndex(std::make_unique<u32[]>(tileCount)),
+          moistureEastWeight(std::make_unique<f32[]>(tileCount)),
+          moistureNorthWeight(std::make_unique<f32[]>(tileCount)),
           latitudeRadians(std::make_unique<f32[]>(tileCount)),
           relativeAltitude(std::make_unique<f32[]>(tileCount)) {}
 
@@ -71,8 +93,16 @@ public:
           humidityKgPerKg(copyBuffer(other.humidityKgPerKg, other.tileCount)),
           turnPrecipitation(copyBuffer(other.turnPrecipitation, other.tileCount)),
           annualPrecipitationAccumulator(copyBuffer(other.annualPrecipitationAccumulator, other.tileCount)),
+          humidityScratchKgPerKg(allocateBuffer<f32>(other.tileCount)),
+          moistureUpwindEastIndex(allocateBuffer<u32>(other.tileCount)),
+          moistureUpwindNorthIndex(allocateBuffer<u32>(other.tileCount)),
+          moistureEastWeight(allocateBuffer<f32>(other.tileCount)),
+          moistureNorthWeight(allocateBuffer<f32>(other.tileCount)),
           latitudeRadians(copyBuffer(other.latitudeRadians, other.tileCount)),
-          relativeAltitude(copyBuffer(other.relativeAltitude, other.tileCount)) {}
+          relativeAltitude(copyBuffer(other.relativeAltitude, other.tileCount)),
+          seaLevelTemperatureTurnCount(other.seaLevelTemperatureTurnCount),
+          seaLevelTemperatureByTurnRow(copyBuffer(other.seaLevelTemperatureByTurnRow,
+              other.seaLevelTemperatureTurnCount * other.gridHeight)) {}
 
     ClimateState& operator=(const ClimateState& other) {
         if (this == &other) {
@@ -92,8 +122,17 @@ public:
         humidityKgPerKg = copyBuffer(other.humidityKgPerKg, other.tileCount);
         turnPrecipitation = copyBuffer(other.turnPrecipitation, other.tileCount);
         annualPrecipitationAccumulator = copyBuffer(other.annualPrecipitationAccumulator, other.tileCount);
+        humidityScratchKgPerKg = allocateBuffer<f32>(other.tileCount);
+        moistureUpwindEastIndex = allocateBuffer<u32>(other.tileCount);
+        moistureUpwindNorthIndex = allocateBuffer<u32>(other.tileCount);
+        moistureEastWeight = allocateBuffer<f32>(other.tileCount);
+        moistureNorthWeight = allocateBuffer<f32>(other.tileCount);
         latitudeRadians = copyBuffer(other.latitudeRadians, other.tileCount);
         relativeAltitude = copyBuffer(other.relativeAltitude, other.tileCount);
+        seaLevelTemperatureTurnCount = other.seaLevelTemperatureTurnCount;
+        seaLevelTemperatureByTurnRow = copyBuffer(
+            other.seaLevelTemperatureByTurnRow,
+            other.seaLevelTemperatureTurnCount * other.gridHeight);
 
         return *this;
     }

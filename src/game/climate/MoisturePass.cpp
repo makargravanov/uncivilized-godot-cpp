@@ -43,6 +43,7 @@ constexpr f32 MAX_OVERLAY_HUMIDITY = 0.025f;
 // Tile spacing (must match MapManager / WindPass values).
 constexpr f32 TILE_STEP_X = 173.205078f / 100.0f;
 constexpr f32 TILE_STEP_Z = 150.0f / 100.0f;
+constexpr f32 MIN_WIND_SPEED_MPS = 1e-3f;
 
 // ─── helpers ───────────────────────────────────────────────────────
 
@@ -94,18 +95,29 @@ void applyOceanEvaporation(ClimateState& climateState) {
     }
 }
 
-void advectMoistureOneSubStep(ClimateState& climateState, const std::unique_ptr<f32[]>& previousHumidity) {
-    const u32 width = climateState.gridWidth;
+void precomputeTransportMetadata(ClimateState& climateState) {
+    if (!climateState.windEastMps || !climateState.windNorthMps ||
+        !climateState.moistureUpwindEastIndex || !climateState.moistureUpwindNorthIndex ||
+        !climateState.moistureEastWeight || !climateState.moistureNorthWeight) {
+        return;
+    }
 
+    const u32 width = climateState.gridWidth;
     for (u32 row = 0; row < climateState.gridHeight; ++row) {
         for (u32 col = 0; col < width; ++col) {
             const u32 idx = row * width + col;
             const f32 windEast = climateState.windEastMps[idx];
             const f32 windNorth = climateState.windNorthMps[idx];
+            const f32 windSpeed = std::sqrt(windEast * windEast + windNorth * windNorth);
 
-            // Upwind: sample from the direction the wind is coming FROM.
-            // Positive windEast means wind blows eastward → moisture comes from west (col-1).
-            // Positive windNorth means wind blows northward → moisture comes from south (row+1 in screen coords).
+            if (windSpeed < MIN_WIND_SPEED_MPS) {
+                climateState.moistureUpwindEastIndex[idx] = idx;
+                climateState.moistureUpwindNorthIndex[idx] = idx;
+                climateState.moistureEastWeight[idx] = 1.0f;
+                climateState.moistureNorthWeight[idx] = 0.0f;
+                continue;
+            }
+
             const i32 upwindCol = windEast > 0.0f
                 ? static_cast<i32>(col) - 1
                 : static_cast<i32>(col) + 1;
@@ -113,35 +125,48 @@ void advectMoistureOneSubStep(ClimateState& climateState, const std::unique_ptr<
                 ? static_cast<i32>(row) + 1
                 : static_cast<i32>(row) - 1;
 
-            const f32 windSpeed = std::sqrt(windEast * windEast + windNorth * windNorth);
-            if (windSpeed < 1e-3f) {
-                climateState.humidityKgPerKg[idx] = previousHumidity[idx];
-                continue;
-            }
-
-            // Weight east/north contribution by the fraction of wind in that direction.
-            const f32 eastWeight = std::abs(windEast) / windSpeed;
-            const f32 northWeight = std::abs(windNorth) / windSpeed;
-
-            const f32 upwindEastHumidity = previousHumidity[tileIndex(climateState, upwindCol, static_cast<i32>(row))];
-            const f32 upwindNorthHumidity = previousHumidity[tileIndex(climateState, static_cast<i32>(col), upwindRow)];
-
-            const f32 upwindBlended = eastWeight * upwindEastHumidity + northWeight * upwindNorthHumidity;
-            const f32 currentHumidity = previousHumidity[idx];
-
-            climateState.humidityKgPerKg[idx] =
-                currentHumidity + (upwindBlended - currentHumidity) * ADVECTION_MIXING_FRACTION;
+            climateState.moistureUpwindEastIndex[idx] =
+                tileIndex(climateState, upwindCol, static_cast<i32>(row));
+            climateState.moistureUpwindNorthIndex[idx] =
+                tileIndex(climateState, static_cast<i32>(col), upwindRow);
+            climateState.moistureEastWeight[idx] = std::abs(windEast) / windSpeed;
+            climateState.moistureNorthWeight[idx] = std::abs(windNorth) / windSpeed;
         }
     }
 }
 
+void advectMoistureOneSubStep(ClimateState& climateState) {
+    if (!climateState.humidityScratchKgPerKg || !climateState.humidityKgPerKg ||
+        !climateState.moistureUpwindEastIndex || !climateState.moistureUpwindNorthIndex ||
+        !climateState.moistureEastWeight || !climateState.moistureNorthWeight) {
+        return;
+    }
+
+    const f32* previousHumidity = climateState.humidityScratchKgPerKg.get();
+    f32* currentHumidity = climateState.humidityKgPerKg.get();
+    const u32* upwindEastIndex = climateState.moistureUpwindEastIndex.get();
+    const u32* upwindNorthIndex = climateState.moistureUpwindNorthIndex.get();
+    const f32* eastWeight = climateState.moistureEastWeight.get();
+    const f32* northWeight = climateState.moistureNorthWeight.get();
+
+    for (u32 idx = 0; idx < climateState.tileCount; ++idx) {
+        const f32 upwindBlended =
+            eastWeight[idx] * previousHumidity[upwindEastIndex[idx]]
+            + northWeight[idx] * previousHumidity[upwindNorthIndex[idx]];
+        const f32 humidityHere = previousHumidity[idx];
+        currentHumidity[idx] = humidityHere + (upwindBlended - humidityHere) * ADVECTION_MIXING_FRACTION;
+    }
+}
+
 void advectMoisture(ClimateState& climateState) {
-    auto previousHumidity = std::make_unique<f32[]>(climateState.tileCount);
+    if (!climateState.humidityScratchKgPerKg || !climateState.humidityKgPerKg) {
+        return;
+    }
 
     for (u32 step = 0; step < ADVECTION_SUB_STEPS; ++step) {
-        std::memcpy(previousHumidity.get(), climateState.humidityKgPerKg.get(),
-                     climateState.tileCount * sizeof(f32));
-        advectMoistureOneSubStep(climateState, previousHumidity);
+        std::memcpy(climateState.humidityScratchKgPerKg.get(), climateState.humidityKgPerKg.get(),
+                    climateState.tileCount * sizeof(f32));
+        advectMoistureOneSubStep(climateState);
     }
 }
 
@@ -190,6 +215,7 @@ void MoisturePass::initialize(ClimateState& climateState) {
 
     std::memset(climateState.turnPrecipitation.get(), 0, climateState.tileCount * sizeof(f32));
     std::memset(climateState.annualPrecipitationAccumulator.get(), 0, climateState.tileCount * sizeof(f32));
+    precomputeTransportMetadata(climateState);
 
     // Run several cycles to reach a plausible initial distribution.
     for (u32 warmup = 0; warmup < 4; ++warmup) {
@@ -213,6 +239,7 @@ void MoisturePass::advanceOneTurn(ClimateState& climateState) {
         !climateState.windEastMps || !climateState.windNorthMps) return;
 
     std::memset(climateState.turnPrecipitation.get(), 0, climateState.tileCount * sizeof(f32));
+    precomputeTransportMetadata(climateState);
 
     applyOceanEvaporation(climateState);
     advectMoisture(climateState);

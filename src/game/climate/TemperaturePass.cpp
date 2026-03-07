@@ -22,6 +22,11 @@ constexpr f32 EQUATOR_SEA_LEVEL_TEMPERATURE_K = KELVIN_OFFSET + 32.0f;
 constexpr f32 MAX_ALTITUDE_COOLING_K = 38.0f;
 constexpr f32 TURN_RELAXATION_FACTOR = 0.35f;
 constexpr f32 MIN_HEIGHT_RANGE = 1e-6f;
+constexpr u32 LATITUDE_SAMPLE_COUNT = 19;  // every 10° from -90 to +90
+
+u32 lookupIndex(const ClimateState& climateState, const u32 turnIndex, const u32 row) {
+    return turnIndex * climateState.gridHeight + row;
+}
 
 } // namespace
 
@@ -58,6 +63,11 @@ ClimateState TemperaturePass::createInitialState(const MapResult& mapResult) {
         }
     }
 
+    climateState.seaLevelTemperatureTurnCount = Astro::DEFAULT_YEAR_TURN_COUNT;
+    climateState.seaLevelTemperatureByTurnRow =
+        std::make_unique<f32[]>(climateState.seaLevelTemperatureTurnCount * height);
+    precomputeSeaLevelTemperatureLookup(climateState);
+
     climateState.absoluteTurnIndex = 0;
     climateState.currentTurnIndex = 0;
     climateState.currentYearFraction = 0.0f;
@@ -90,47 +100,71 @@ void TemperaturePass::publishToTiles(const ClimateState& climateState, std::uniq
     }
 }
 
-void TemperaturePass::blendTowardTurnTarget(ClimateState& climateState, const u32 turnIndex, const f32 blendFactor) {
+void TemperaturePass::precomputeSeaLevelTemperatureLookup(ClimateState& climateState) {
+    if (!climateState.seaLevelTemperatureByTurnRow || climateState.gridHeight == 0 ||
+        climateState.seaLevelTemperatureTurnCount == 0) {
+        return;
+    }
+
     const Astro::StarParams starParams;
     const Astro::OrbitalParams orbitalParams;
 
-    const u32 turnStart = turnIndex % Astro::DEFAULT_YEAR_TURN_COUNT;
-    const u32 turnEnd = turnStart + 1;
+    for (u32 turnIndex = 0; turnIndex < climateState.seaLevelTemperatureTurnCount; ++turnIndex) {
+        const u32 turnStart = turnIndex;
+        const u32 turnEnd = turnStart + 1;
 
-    // Sample insolation at several latitudes to find the actual min/max for this turn.
-    // During polar summer the pole can receive MORE insolation than the equator,
-    // so we cannot assume pole=min, equator=max.
-    constexpr u32 LATITUDE_SAMPLE_COUNT = 19;  // every 10° from -90 to +90
-    f64 minInsolation = 1e18;
-    f64 maxInsolation = -1e18;
-    for (u32 s = 0; s < LATITUDE_SAMPLE_COUNT; ++s) {
-        const f64 sampleLatitude = -Astro::HALF_PI + s * (Astro::PI / (LATITUDE_SAMPLE_COUNT - 1));
-        const f64 sampleInsolation = Astro::Astrophysics::calculateAverageInsolationForTurnRange(
-            sampleLatitude, turnStart, turnEnd, starParams, orbitalParams);
-        minInsolation = std::min(minInsolation, sampleInsolation);
-        maxInsolation = std::max(maxInsolation, sampleInsolation);
+        f64 minInsolation = 1e18;
+        f64 maxInsolation = -1e18;
+        for (u32 sampleIndex = 0; sampleIndex < LATITUDE_SAMPLE_COUNT; ++sampleIndex) {
+            const f64 sampleLatitude = -Astro::HALF_PI + sampleIndex * (Astro::PI / (LATITUDE_SAMPLE_COUNT - 1));
+            const f64 sampleInsolation = Astro::Astrophysics::calculateAverageInsolationForTurnRange(
+                sampleLatitude, turnStart, turnEnd, starParams, orbitalParams);
+            minInsolation = std::min(minInsolation, sampleInsolation);
+            maxInsolation = std::max(maxInsolation, sampleInsolation);
+        }
+
+        const f64 insolationRange = std::max(maxInsolation - minInsolation, static_cast<f64>(MIN_HEIGHT_RANGE));
+        for (u32 row = 0; row < climateState.gridHeight; ++row) {
+            const f64 latitudeRadians = getLatitudeRadians(row, climateState.gridHeight);
+            const f64 intervalInsolation = Astro::Astrophysics::calculateAverageInsolationForTurnRange(
+                latitudeRadians,
+                turnStart,
+                turnEnd,
+                starParams,
+                orbitalParams);
+            const f32 normalizedInsolation = static_cast<f32>(std::clamp(
+                (intervalInsolation - minInsolation) / insolationRange,
+                0.0,
+                1.0));
+
+            climateState.seaLevelTemperatureByTurnRow[lookupIndex(climateState, turnIndex, row)] =
+                POLAR_SEA_LEVEL_TEMPERATURE_K
+                + normalizedInsolation * (EQUATOR_SEA_LEVEL_TEMPERATURE_K - POLAR_SEA_LEVEL_TEMPERATURE_K);
+        }
     }
-    const f64 insolationRange = std::max(maxInsolation - minInsolation, static_cast<f64>(MIN_HEIGHT_RANGE));
+}
 
-    for (u32 index = 0; index < climateState.tileCount; ++index) {
-        const f64 intervalInsolation = Astro::Astrophysics::calculateAverageInsolationForTurnRange(
-            climateState.latitudeRadians[index],
-            turnStart,
-            turnEnd,
-            starParams,
-            orbitalParams);
-        const f32 normalizedInsolation = static_cast<f32>(std::clamp(
-            (intervalInsolation - minInsolation) / insolationRange,
-            0.0,
-            1.0));
+void TemperaturePass::blendTowardTurnTarget(ClimateState& climateState, const u32 turnIndex, const f32 blendFactor) {
+    if (!climateState.temperatureKelvin || !climateState.relativeAltitude ||
+        !climateState.seaLevelTemperatureByTurnRow || climateState.gridWidth == 0 || climateState.gridHeight == 0 ||
+        climateState.seaLevelTemperatureTurnCount == 0) {
+        return;
+    }
 
-        const f32 seaLevelTargetK = POLAR_SEA_LEVEL_TEMPERATURE_K
-            + normalizedInsolation * (EQUATOR_SEA_LEVEL_TEMPERATURE_K - POLAR_SEA_LEVEL_TEMPERATURE_K);
-        const f32 altitudeCoolingK = climateState.relativeAltitude[index] * MAX_ALTITUDE_COOLING_K;
-        const f32 targetTemperatureK = seaLevelTargetK - altitudeCoolingK;
+    const u32 lookupTurn = turnIndex % climateState.seaLevelTemperatureTurnCount;
 
-        climateState.temperatureKelvin[index] +=
-            (targetTemperatureK - climateState.temperatureKelvin[index]) * blendFactor;
+    for (u32 row = 0; row < climateState.gridHeight; ++row) {
+        const f32 seaLevelTargetK = climateState.seaLevelTemperatureByTurnRow[
+            lookupIndex(climateState, lookupTurn, row)];
+        const u32 rowStart = row * climateState.gridWidth;
+        for (u32 column = 0; column < climateState.gridWidth; ++column) {
+            const u32 index = rowStart + column;
+            const f32 altitudeCoolingK = climateState.relativeAltitude[index] * MAX_ALTITUDE_COOLING_K;
+            const f32 targetTemperatureK = seaLevelTargetK - altitudeCoolingK;
+
+            climateState.temperatureKelvin[index] +=
+                (targetTemperatureK - climateState.temperatureKelvin[index]) * blendFactor;
+        }
     }
 }
 

@@ -25,6 +25,7 @@ public:
 private:
     static f64 getLatitudeRadians(u32 row, u32 height);
     static i8 quantizeTemperature(f32 temperatureCelsius);
+    static void precomputeSeaLevelTemperatureLookup(ClimateState& climateState);
     static void blendTowardTurnTarget(ClimateState& climateState, u32 turnIndex, f32 blendFactor);
 };
 
