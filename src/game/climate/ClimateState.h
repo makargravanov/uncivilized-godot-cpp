@@ -53,6 +53,7 @@ public:
     std::unique_ptr<u32[]> moistureUpwindNorthIndex;
     std::unique_ptr<f32[]> moistureEastWeight;
     std::unique_ptr<f32[]> moistureNorthWeight;
+    std::unique_ptr<f32[]> moistureMixingFactor;
 
     // Minimal static inputs needed by the temperature model.
     std::unique_ptr<f32[]> latitudeRadians;
@@ -77,6 +78,7 @@ public:
           moistureUpwindNorthIndex(std::make_unique<u32[]>(tileCount)),
           moistureEastWeight(std::make_unique<f32[]>(tileCount)),
           moistureNorthWeight(std::make_unique<f32[]>(tileCount)),
+          moistureMixingFactor(std::make_unique<f32[]>(tileCount)),
           latitudeRadians(std::make_unique<f32[]>(tileCount)),
           relativeAltitude(std::make_unique<f32[]>(tileCount)) {}
 
@@ -98,6 +100,7 @@ public:
           moistureUpwindNorthIndex(allocateBuffer<u32>(other.tileCount)),
           moistureEastWeight(allocateBuffer<f32>(other.tileCount)),
           moistureNorthWeight(allocateBuffer<f32>(other.tileCount)),
+          moistureMixingFactor(allocateBuffer<f32>(other.tileCount)),
           latitudeRadians(copyBuffer(other.latitudeRadians, other.tileCount)),
           relativeAltitude(copyBuffer(other.relativeAltitude, other.tileCount)),
           seaLevelTemperatureTurnCount(other.seaLevelTemperatureTurnCount),
@@ -127,6 +130,7 @@ public:
         moistureUpwindNorthIndex = allocateBuffer<u32>(other.tileCount);
         moistureEastWeight = allocateBuffer<f32>(other.tileCount);
         moistureNorthWeight = allocateBuffer<f32>(other.tileCount);
+        moistureMixingFactor = allocateBuffer<f32>(other.tileCount);
         latitudeRadians = copyBuffer(other.latitudeRadians, other.tileCount);
         relativeAltitude = copyBuffer(other.relativeAltitude, other.tileCount);
         seaLevelTemperatureTurnCount = other.seaLevelTemperatureTurnCount;

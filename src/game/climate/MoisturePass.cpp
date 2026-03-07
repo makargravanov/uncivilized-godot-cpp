@@ -32,6 +32,8 @@ constexpr u32 ADVECTION_SUB_STEPS = 12;
 
 // Advection transfer fraction per sub-step (how much of the upwind cell's humidity is mixed in).
 constexpr f32 ADVECTION_MIXING_FRACTION = 0.25f;
+constexpr f32 REFERENCE_ADVECTION_WIND_SPEED_MPS = 8.0f;
+constexpr f32 MAX_ADVECTION_MIXING_FACTOR = 0.45f;
 
 // Threshold below which relativeAltitude is considered ocean.
 constexpr f32 OCEAN_ALTITUDE_THRESHOLD = 1e-6f;
@@ -98,7 +100,8 @@ void applyOceanEvaporation(ClimateState& climateState) {
 void precomputeTransportMetadata(ClimateState& climateState) {
     if (!climateState.windEastMps || !climateState.windNorthMps ||
         !climateState.moistureUpwindEastIndex || !climateState.moistureUpwindNorthIndex ||
-        !climateState.moistureEastWeight || !climateState.moistureNorthWeight) {
+        !climateState.moistureEastWeight || !climateState.moistureNorthWeight ||
+        !climateState.moistureMixingFactor) {
         return;
     }
 
@@ -115,6 +118,7 @@ void precomputeTransportMetadata(ClimateState& climateState) {
                 climateState.moistureUpwindNorthIndex[idx] = idx;
                 climateState.moistureEastWeight[idx] = 1.0f;
                 climateState.moistureNorthWeight[idx] = 0.0f;
+                climateState.moistureMixingFactor[idx] = 0.0f;
                 continue;
             }
 
@@ -131,6 +135,10 @@ void precomputeTransportMetadata(ClimateState& climateState) {
                 tileIndex(climateState, static_cast<i32>(col), upwindRow);
             climateState.moistureEastWeight[idx] = std::abs(windEast) / windSpeed;
             climateState.moistureNorthWeight[idx] = std::abs(windNorth) / windSpeed;
+            climateState.moistureMixingFactor[idx] = std::clamp(
+                ADVECTION_MIXING_FRACTION * (windSpeed / REFERENCE_ADVECTION_WIND_SPEED_MPS),
+                0.0f,
+                MAX_ADVECTION_MIXING_FACTOR);
         }
     }
 }
@@ -138,7 +146,8 @@ void precomputeTransportMetadata(ClimateState& climateState) {
 void advectMoistureOneSubStep(ClimateState& climateState) {
     if (!climateState.humidityScratchKgPerKg || !climateState.humidityKgPerKg ||
         !climateState.moistureUpwindEastIndex || !climateState.moistureUpwindNorthIndex ||
-        !climateState.moistureEastWeight || !climateState.moistureNorthWeight) {
+        !climateState.moistureEastWeight || !climateState.moistureNorthWeight ||
+        !climateState.moistureMixingFactor) {
         return;
     }
 
@@ -148,13 +157,14 @@ void advectMoistureOneSubStep(ClimateState& climateState) {
     const u32* upwindNorthIndex = climateState.moistureUpwindNorthIndex.get();
     const f32* eastWeight = climateState.moistureEastWeight.get();
     const f32* northWeight = climateState.moistureNorthWeight.get();
+    const f32* mixingFactor = climateState.moistureMixingFactor.get();
 
     for (u32 idx = 0; idx < climateState.tileCount; ++idx) {
         const f32 upwindBlended =
             eastWeight[idx] * previousHumidity[upwindEastIndex[idx]]
             + northWeight[idx] * previousHumidity[upwindNorthIndex[idx]];
         const f32 humidityHere = previousHumidity[idx];
-        currentHumidity[idx] = humidityHere + (upwindBlended - humidityHere) * ADVECTION_MIXING_FRACTION;
+        currentHumidity[idx] = humidityHere + (upwindBlended - humidityHere) * mixingFactor[idx];
     }
 }
 
