@@ -9,6 +9,29 @@
 #include "game/climate/TemperaturePass.h"
 #include "game/SystemNexus.h"
 
+namespace {
+
+constexpr i32 CUSTOM_DATA_FLOAT_COUNT = 4;
+constexpr f32 BUFFER_COMPARE_EPSILON = 1e-6f;
+
+void refreshMeshOverlay(LandTypeMeshData& meshData, const ViewMode mode, const OverlayFunc& overlayFunc) {
+    if (meshData.material.is_valid() && meshData.lastAppliedViewMode != mode) {
+        meshData.material->set_shader_parameter("view_mode", static_cast<int>(mode));
+        meshData.lastAppliedViewMode = mode;
+    }
+
+    for (i32 index = 0; index < static_cast<i32>(meshData.tileIndices.size()); ++index) {
+        const f32 overlayValue = (mode != VIEW_NORMAL && overlayFunc)
+            ? overlayFunc(meshData.tileIndices[index])
+            : 0.0f;
+        meshData.setCachedCustomDataAlpha(index, overlayValue);
+    }
+
+    meshData.applyBufferCache();
+}
+
+} // namespace
+
 f32 MapManager::tileHorizontalOffset   = 173.205078 / 100;
 f32 MapManager::oddRowHorizontalOffset = 86.602539 / 100;
 f32 MapManager::tileVerticalOffset     = 150.0 / 100;
@@ -63,6 +86,62 @@ void LandTypeMeshData::removeFromScene() const {
     if (instance) {
         SystemNexus::playScene()->removeISM(instance.get());
     }
+}
+
+void LandTypeMeshData::captureBufferCache() {
+    instanceBufferCache = godot::PackedFloat32Array();
+    instanceFloatStride = 0;
+    customDataOffset = -1;
+    bufferCacheDirty = false;
+
+    if (!multiMesh.is_valid()) {
+        return;
+    }
+
+    const i32 instanceCount = multiMesh->get_instance_count();
+    if (instanceCount <= 0) {
+        return;
+    }
+
+    instanceBufferCache = multiMesh->get_buffer();
+    const i32 bufferSize = instanceBufferCache.size();
+    if (bufferSize <= 0 || bufferSize % instanceCount != 0) {
+        instanceBufferCache = godot::PackedFloat32Array();
+        return;
+    }
+
+    instanceFloatStride = bufferSize / instanceCount;
+    if (multiMesh->is_using_custom_data() && instanceFloatStride >= CUSTOM_DATA_FLOAT_COUNT) {
+        customDataOffset = instanceFloatStride - CUSTOM_DATA_FLOAT_COUNT;
+    }
+}
+
+void LandTypeMeshData::setCachedCustomDataAlpha(const i32 index, const f32 alpha) {
+    if (customDataOffset < 0 || instanceFloatStride <= 0 || index < 0) {
+        return;
+    }
+
+    const i32 baseOffset = index * instanceFloatStride + customDataOffset;
+    if (baseOffset + 3 >= instanceBufferCache.size()) {
+        return;
+    }
+
+    f32* bufferWrite = instanceBufferCache.ptrw();
+    if (std::abs(bufferWrite[baseOffset + 3] - alpha) <= BUFFER_COMPARE_EPSILON) {
+        return;
+    }
+
+    bufferWrite[baseOffset + 3] = alpha;
+    bufferCacheDirty = true;
+}
+
+void LandTypeMeshData::applyBufferCache() {
+    if (!bufferCacheDirty || !multiMesh.is_valid() || instanceBufferCache.size() == 0) {
+        return;
+    }
+
+    multiMesh->set_buffer(instanceBufferCache);
+    bufferCacheDirty = false;
 }
 
 Chunk::~Chunk() {
@@ -165,9 +244,12 @@ void MapManager::loadChunk(godot::Vector2i vec) {
                 it->second.tileIndices.push_back(instances[i].tileIndex);
             }
 
+            it->second.captureBufferCache();
+
             // Apply current view_mode uniform.
             if (it->second.material.is_valid()) {
                 it->second.material->set_shader_parameter("view_mode", static_cast<int>(currentViewMode));
+                it->second.lastAppliedViewMode = currentViewMode;
             }
         }
     }
@@ -239,23 +321,7 @@ void MapManager::setViewMode(ViewMode mode, const OverlayFunc& overlayFunc) {
 
     for (auto& [chunkPos, chunk] : loadedChunks) {
         for (auto& [relief, meshData] : chunk.meshes) {
-            // Set uniform on material.
-            if (meshData.material.is_valid()) {
-                meshData.material->set_shader_parameter("view_mode", static_cast<int>(mode));
-            }
-
-            // Rewrite .w channel on every instance.
-            if (meshData.multiMesh.is_valid()) {
-                for (i32 i = 0; i < static_cast<i32>(meshData.tileIndices.size()); ++i) {
-                    godot::Color data = meshData.multiMesh->get_instance_custom_data(i);
-                    if (mode != VIEW_NORMAL && overlayFunc) {
-                        data.a = overlayFunc(meshData.tileIndices[i]);
-                    } else {
-                        data.a = 0.0f;
-                    }
-                    meshData.multiMesh->set_instance_custom_data(i, data);
-                }
-            }
+            refreshMeshOverlay(meshData, mode, overlayFunc);
         }
     }
 }

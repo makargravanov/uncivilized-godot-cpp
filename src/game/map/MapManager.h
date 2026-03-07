@@ -40,6 +40,11 @@ struct LandTypeMeshData {
     GodotPtr<godot::MultiMeshInstance3D> instance;
     godot::Ref<godot::MultiMesh> multiMesh;
     godot::Ref<godot::ShaderMaterial> material;
+    godot::PackedFloat32Array instanceBufferCache;
+    i32 instanceFloatStride = 0;
+    i32 customDataOffset = -1;
+    bool bufferCacheDirty = false;
+    ViewMode lastAppliedViewMode = VIEW_MODE_COUNT;
 
     // Per-instance tile index for overlay updates.
     std::vector<i32> tileIndices;
@@ -56,6 +61,9 @@ struct LandTypeMeshData {
     bool initialize(i32 instanceCount, const char* meshPath, const char* materialPath);
     void addToScene() const;
     void removeFromScene() const;
+    void captureBufferCache();
+    void setCachedCustomDataAlpha(i32 index, f32 alpha);
+    void applyBufferCache();
 
     void setInstanceTransform(i32 index, const godot::Transform3D& transform) const {
         if (multiMesh.is_valid()) {
