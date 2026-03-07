@@ -9,6 +9,7 @@
 
 #include "api-classes/PlayScene.h"
 #include "climate/ClimateState.h"
+#include "climate/MoisturePass.h"
 #include "climate/TemperaturePass.h"
 #include "climate/WindPass.h"
 #include "map/MapManager.h"
@@ -27,7 +28,9 @@ public:
         climateState = std::make_unique<ClimateState>(
             TemperaturePass::createInitialState(mapResult.mapResult));
         WindPass::initialize(*climateState);
+        MoisturePass::initialize(*climateState);
         TemperaturePass::publishToTiles(*climateState, tiles);
+        MoisturePass::publishToTiles(*climateState, tiles);
 
         mapManager = new MapManager(
             std::move(tiles),
@@ -49,6 +52,7 @@ public:
 
         TemperaturePass::advanceOneTurn(*climateState);
         WindPass::advanceOneTurn(*climateState);
+        MoisturePass::advanceOneTurn(*climateState);
         mapManager->updateTemperatureSnapshot(*climateState);
     }
 

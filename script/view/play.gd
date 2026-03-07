@@ -2,6 +2,7 @@ extends Node3D
 
 const VIEW_NORMAL := 0
 const VIEW_TEMPERATURE := 1
+const VIEW_MOISTURE := 2
 const VIEW_ELEVATION := 3
 const VIEW_BIOME := 4
 const VIEW_WIND := 5
@@ -9,14 +10,16 @@ const VIEW_WIND := 5
 const VIEW_MODE_KEYS := {
 	KEY_1: VIEW_NORMAL,
 	KEY_2: VIEW_TEMPERATURE,
-	KEY_3: VIEW_ELEVATION,
-	KEY_4: VIEW_BIOME,
-	KEY_5: VIEW_WIND,
+	KEY_3: VIEW_MOISTURE,
+	KEY_4: VIEW_ELEVATION,
+	KEY_5: VIEW_BIOME,
+	KEY_6: VIEW_WIND,
 }
 
 const VIEW_MODE_NAMES := {
 	VIEW_NORMAL: "Обычный",
 	VIEW_TEMPERATURE: "Температура",
+	VIEW_MOISTURE: "Влажность",
 	VIEW_ELEVATION: "Высота",
 	VIEW_BIOME: "Биомы",
 	VIEW_WIND: "Ветер",
@@ -83,6 +86,12 @@ func _showTileInfo(info: Dictionary):
 			info.get("wind_speed", 0.0),
 			info.get("wind_east", 0.0),
 			info.get("wind_north", 0.0)])
+	if info.has("humidity"):
+		lines.append("Влажность: %.4f kg/kg" % info.get("humidity", 0.0))
+	if info.has("precipitation_turn"):
+		lines.append("Осадки (ход): %.5f" % info.get("precipitation_turn", 0.0))
+	if info.has("precipitation_annual"):
+		lines.append("Осадки (год): %.4f" % info.get("precipitation_annual", 0.0))
 	tileInfoLabel.text = "\n".join(lines)
 
 func _updateLabel(mode: int):

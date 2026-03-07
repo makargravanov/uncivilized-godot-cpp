@@ -22,6 +22,9 @@ struct ClimateState {
     std::unique_ptr<f32[]> temperatureKelvin;
     std::unique_ptr<f32[]> windEastMps;
     std::unique_ptr<f32[]> windNorthMps;
+    std::unique_ptr<f32[]> humidityKgPerKg;
+    std::unique_ptr<f32[]> turnPrecipitation;
+    std::unique_ptr<f32[]> annualPrecipitationAccumulator;
 
     // Minimal static inputs needed by the temperature model.
     std::unique_ptr<f32[]> latitudeRadians;
@@ -36,6 +39,9 @@ struct ClimateState {
           temperatureKelvin(std::make_unique<f32[]>(tileCount)),
                     windEastMps(std::make_unique<f32[]>(tileCount)),
                     windNorthMps(std::make_unique<f32[]>(tileCount)),
+          humidityKgPerKg(std::make_unique<f32[]>(tileCount)),
+          turnPrecipitation(std::make_unique<f32[]>(tileCount)),
+          annualPrecipitationAccumulator(std::make_unique<f32[]>(tileCount)),
           latitudeRadians(std::make_unique<f32[]>(tileCount)),
           relativeAltitude(std::make_unique<f32[]>(tileCount)) {}
 

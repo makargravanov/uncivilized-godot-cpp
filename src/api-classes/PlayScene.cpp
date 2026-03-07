@@ -14,6 +14,7 @@
 #include <godot_cpp/variant/vector3.hpp>
 
 #include "game/climate/TemperaturePass.h"
+#include "game/climate/MoisturePass.h"
 #include "game/climate/ClimateState.h"
 #include "game/SystemNexus.h"
 #include "game/map/ViewMode.h"
@@ -107,6 +108,14 @@ void PlayScene::set_view_mode(int mode) {
             const auto& tile = mapManager->getTile(tileIndex);
             return TemperaturePass::normalizeForOverlay(tile.temperature);
         };
+    } else if (currentViewMode == VIEW_MOISTURE) {
+        func = [](i32 tileIndex) -> f32 {
+            if (const ClimateState* climateState = SystemNexus::getClimateState();
+                climateState && climateState->humidityKgPerKg) {
+                return MoisturePass::normalizeForOverlay(climateState->humidityKgPerKg[tileIndex]);
+            }
+            return 0.0f;
+        };
     } else if (currentViewMode == VIEW_ELEVATION) {
         // Demo overlay: use raw biome_id normalized to [0,1] as placeholder.
         func = [this](i32 tileIndex) -> f32 {
@@ -162,6 +171,12 @@ godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float wo
             result["latitude_deg"] = cs->latitudeRadians[tileIndex] * (180.0f / 3.14159265f);
         if (cs->relativeAltitude)
             result["altitude"] = cs->relativeAltitude[tileIndex];
+        if (cs->humidityKgPerKg)
+            result["humidity"] = cs->humidityKgPerKg[tileIndex];
+        if (cs->turnPrecipitation)
+            result["precipitation_turn"] = cs->turnPrecipitation[tileIndex];
+        if (cs->annualPrecipitationAccumulator)
+            result["precipitation_annual"] = cs->annualPrecipitationAccumulator[tileIndex];
     }
 
     return result;
