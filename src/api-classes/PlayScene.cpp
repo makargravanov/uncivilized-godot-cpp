@@ -127,7 +127,8 @@ void PlayScene::set_view_mode(int mode) {
         func = [](i32 tileIndex) -> f32 {
             if (const ClimateState* climateState = SystemNexus::getClimateState();
                 climateState && climateState->turnPrecipitation) {
-                return std::clamp(climateState->turnPrecipitation[tileIndex] * 500.0f, 0.0f, 1.0f);
+                return MoisturePass::normalizePrecipitationForOverlay(
+                    climateState->turnPrecipitation[tileIndex]);
             }
             return 0.0f;
         };

@@ -12,6 +12,7 @@ public:
     static void publishToTiles(const ClimateState& climateState, const std::unique_ptr<TileData[]>& tiles);
 
     static f32 normalizeForOverlay(f32 humidityKgPerKg);
+    static f32 normalizePrecipitationForOverlay(f32 turnPrecipitation);
 };
 
 #endif //MOISTUREPASS_H

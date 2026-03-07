@@ -4,7 +4,7 @@ shader_type spatial;
 // INSTANCE_CUSTOM.x = biome_id, .y = river_edges, .z = features, .w = overlay_value.
 // Procedural noise-based colour variation for natural terrain look.
 
-uniform int view_mode : hint_range(0, 4) = 0;
+uniform int view_mode : hint_range(0, 6) = 0;
 
 varying flat float biome_id;
 varying flat float river_edges;
@@ -26,6 +26,7 @@ void vertex() {
 // mode 2 (moisture):    brown → yellow → green → cyan → blue
 // mode 3 (elevation):   dark green → green → yellow → white
 // mode 4 (biome):       distinct hue per biome_id
+// mode 6 (precip):      dark violet → indigo → cyan → green → yellow
 
 vec3 heatmap_ramp(float t, int mode) {
 	t = clamp(t, 0.0, 1.0);
@@ -62,6 +63,17 @@ vec3 heatmap_ramp(float t, int mode) {
 		if (t < 0.33) return mix(c0, c1, t / 0.33);
 		if (t < 0.66) return mix(c1, c2, (t - 0.33) / 0.33);
 		return mix(c2, c3, (t - 0.66) / 0.34);
+	}
+	if (mode == 6) {
+		vec3 c0 = vec3(0.10, 0.05, 0.18);
+		vec3 c1 = vec3(0.20, 0.14, 0.52);
+		vec3 c2 = vec3(0.10, 0.56, 0.84);
+		vec3 c3 = vec3(0.34, 0.82, 0.46);
+		vec3 c4 = vec3(0.96, 0.92, 0.54);
+		if (t < 0.25) return mix(c0, c1, t / 0.25);
+		if (t < 0.50) return mix(c1, c2, (t - 0.25) / 0.25);
+		if (t < 0.75) return mix(c2, c3, (t - 0.50) / 0.25);
+		return mix(c3, c4, (t - 0.75) / 0.25);
 	}
 	// mode 4 — biome: distinct hue from biome_id
 	float hue = fract(t * 0.618 + 0.1);

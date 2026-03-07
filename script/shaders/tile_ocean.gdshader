@@ -7,7 +7,7 @@ shader_type spatial;
 //   - Parallax fake-depth: view-dependent UV shift reveals "seabed" layer
 //   - Deep vs shallow biome controls depth amount and colour
 
-uniform int view_mode : hint_range(0, 4) = 0;
+uniform int view_mode : hint_range(0, 6) = 0;
 
 varying flat float biome_id;
 varying flat float overlay_value;
@@ -119,6 +119,17 @@ vec3 heatmap_ramp(float t, int mode) {
 		if (t < 0.33) return mix(c0, c1, t / 0.33);
 		if (t < 0.66) return mix(c1, c2, (t - 0.33) / 0.33);
 		return mix(c2, c3, (t - 0.66) / 0.34);
+	}
+	if (mode == 6) {
+		vec3 c0 = vec3(0.10, 0.05, 0.18);
+		vec3 c1 = vec3(0.20, 0.14, 0.52);
+		vec3 c2 = vec3(0.10, 0.56, 0.84);
+		vec3 c3 = vec3(0.34, 0.82, 0.46);
+		vec3 c4 = vec3(0.96, 0.92, 0.54);
+		if (t < 0.25) return mix(c0, c1, t / 0.25);
+		if (t < 0.50) return mix(c1, c2, (t - 0.25) / 0.25);
+		if (t < 0.75) return mix(c2, c3, (t - 0.50) / 0.25);
+		return mix(c3, c4, (t - 0.75) / 0.25);
 	}
 	float hue = fract(t * 0.618 + 0.1);
 	vec3 c = clamp(abs(mod(hue * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
