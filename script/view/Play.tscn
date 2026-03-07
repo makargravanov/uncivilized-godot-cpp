@@ -37,6 +37,20 @@ offset_right = 300.0
 offset_bottom = 40.0
 text = "Обычный"
 
+[node name="TileInfoLabel" type="Label" parent="CanvasLayer"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -280.0
+offset_top = -200.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+text = ""
+
 [node name="HexagonMesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.630391, -0.776277, 0, 0.776277, 0.630391, -0.659801, 0.572679, -3.6729)
 mesh = ExtResource("3_poi7b")

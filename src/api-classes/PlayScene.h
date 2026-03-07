@@ -14,6 +14,7 @@
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/standard_material3d.hpp>
 #include <godot_cpp/classes/node.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
 
 namespace godot {
     class MultiMeshInstance3D;
@@ -36,6 +37,9 @@ public:
 
     // Overlay system — call from GDScript: play_scene.set_view_mode(...)
     void set_view_mode(int mode);
+
+    // Returns tile info at world (x, z) or empty dict if out of bounds.
+    godot::Dictionary get_tile_info_at(float worldX, float worldZ);
 
 private:
     void ensureWindDebugNode();

@@ -60,6 +60,7 @@ godot::Color getWindDebugColor(const f32 magnitude) {
 
 void PlayScene::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_view_mode", "mode"), &PlayScene::set_view_mode);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_tile_info_at", "worldX", "worldZ"), &PlayScene::get_tile_info_at);
 }
 void PlayScene::_ready() {
     Node::_ready();
@@ -123,6 +124,47 @@ void PlayScene::set_view_mode(int mode) {
     if (currentViewMode == VIEW_WIND) {
         refreshWindDebugView();
     }
+}
+
+godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float worldZ) {
+    godot::Dictionary result;
+    if (!mapManager) return result;
+
+    const i32 row = static_cast<i32>(std::round(worldZ / MapManager::tileVerticalOffset));
+    const bool oddRow = std::abs(row % 2) == 1;
+    const f32 adjustedX = oddRow ? worldX - MapManager::oddRowHorizontalOffset : worldX;
+    const i32 col = static_cast<i32>(std::round(adjustedX / MapManager::tileHorizontalOffset));
+
+    if (row < 0 || row >= mapManager->gridHeight || col < 0 || col >= mapManager->gridWidth) {
+        return result;
+    }
+
+    const i32 tileIndex = row * mapManager->gridWidth + col;
+    const TileData& tile = mapManager->getTile(tileIndex);
+
+    result["col"] = col;
+    result["row"] = row;
+    result["relief"] = static_cast<int>(tile.relief);
+    result["biome"] = static_cast<int>(tile.biome);
+    result["temperature_c"] = static_cast<int>(tile.temperature);
+
+    if (const ClimateState* cs = SystemNexus::getClimateState(); cs) {
+        if (cs->temperatureKelvin)
+            result["temperature_k"] = cs->temperatureKelvin[tileIndex];
+        if (cs->windEastMps && cs->windNorthMps) {
+            const f32 we = cs->windEastMps[tileIndex];
+            const f32 wn = cs->windNorthMps[tileIndex];
+            result["wind_east"] = we;
+            result["wind_north"] = wn;
+            result["wind_speed"] = std::sqrt(we * we + wn * wn);
+        }
+        if (cs->latitudeRadians)
+            result["latitude_deg"] = cs->latitudeRadians[tileIndex] * (180.0f / 3.14159265f);
+        if (cs->relativeAltitude)
+            result["altitude"] = cs->relativeAltitude[tileIndex];
+    }
+
+    return result;
 }
 
 void PlayScene::ensureWindDebugNode() {
