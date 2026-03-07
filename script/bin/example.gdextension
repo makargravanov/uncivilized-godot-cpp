@@ -20,6 +20,9 @@ windows.x86_32.double.debug = "./windows/native.windows.template_debug.x86_32.do
 windows.x86_32.single.release = "./windows/native.windows.template_release.x86_32.dll"
 windows.x86_32.double.release = "./windows/native.windows.template_release.x86_32.double.dll"
 
+; Prefer the release DLL inside the editor to compare runtime cost without changing game export mappings.
+windows.debug.editor.x86_64.single = "./windows/native.windows.template_release.x86_64.dll"
+windows.debug.editor.x86_64.double = "./windows/native.windows.template_release.x86_64.double.dll"
 windows.x86_64.single.debug = "./windows/native.windows.template_debug.x86_64.dll"
 windows.x86_64.double.debug = "./windows/native.windows.template_debug.x86_64.double.dll"
 windows.x86_64.single.release = "./windows/native.windows.template_release.x86_64.dll"
