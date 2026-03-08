@@ -40,6 +40,8 @@ public:
     u64 absoluteTurnIndex = 0;
     u32 currentTurnIndex = 0;
     f32 currentYearFraction = 0.0f;
+    u32 currentYearTurnSamples = 0;
+    u32 completedClimateYears = 0;
 
     // SoA buffers for the current climate state.
     std::unique_ptr<f32[]> temperatureKelvin;
@@ -49,6 +51,13 @@ public:
     std::unique_ptr<f32[]> turnPrecipitation;
     std::unique_ptr<f32[]> annualPrecipitationAccumulator;
     std::unique_ptr<f32[]> humidityScratchKgPerKg;
+    std::unique_ptr<f32[]> currentYearTemperatureSumKelvin;
+    std::unique_ptr<f32[]> currentYearTemperatureMinKelvin;
+    std::unique_ptr<f32[]> currentYearTemperatureMaxKelvin;
+    std::unique_ptr<f32[]> completedAnnualPrecipitation;
+    std::unique_ptr<f32[]> completedAnnualMeanTemperatureKelvin;
+    std::unique_ptr<f32[]> completedAnnualTemperatureMinKelvin;
+    std::unique_ptr<f32[]> completedAnnualTemperatureMaxKelvin;
     std::unique_ptr<u32[]> moistureUpwindEastIndex;
     std::unique_ptr<u32[]> moistureUpwindNorthIndex;
     std::unique_ptr<f32[]> moistureEastWeight;
@@ -75,6 +84,13 @@ public:
           turnPrecipitation(std::make_unique<f32[]>(tileCount)),
           annualPrecipitationAccumulator(std::make_unique<f32[]>(tileCount)),
           humidityScratchKgPerKg(std::make_unique<f32[]>(tileCount)),
+                      currentYearTemperatureSumKelvin(std::make_unique<f32[]>(tileCount)),
+                      currentYearTemperatureMinKelvin(std::make_unique<f32[]>(tileCount)),
+                      currentYearTemperatureMaxKelvin(std::make_unique<f32[]>(tileCount)),
+                      completedAnnualPrecipitation(std::make_unique<f32[]>(tileCount)),
+                      completedAnnualMeanTemperatureKelvin(std::make_unique<f32[]>(tileCount)),
+                      completedAnnualTemperatureMinKelvin(std::make_unique<f32[]>(tileCount)),
+                      completedAnnualTemperatureMaxKelvin(std::make_unique<f32[]>(tileCount)),
           moistureUpwindEastIndex(std::make_unique<u32[]>(tileCount)),
           moistureUpwindNorthIndex(std::make_unique<u32[]>(tileCount)),
           moistureEastWeight(std::make_unique<f32[]>(tileCount)),
@@ -91,6 +107,8 @@ public:
           absoluteTurnIndex(other.absoluteTurnIndex),
           currentTurnIndex(other.currentTurnIndex),
           currentYearFraction(other.currentYearFraction),
+          currentYearTurnSamples(other.currentYearTurnSamples),
+          completedClimateYears(other.completedClimateYears),
           temperatureKelvin(copyBuffer(other.temperatureKelvin, other.tileCount)),
           windEastMps(copyBuffer(other.windEastMps, other.tileCount)),
           windNorthMps(copyBuffer(other.windNorthMps, other.tileCount)),
@@ -98,6 +116,13 @@ public:
           turnPrecipitation(copyBuffer(other.turnPrecipitation, other.tileCount)),
           annualPrecipitationAccumulator(copyBuffer(other.annualPrecipitationAccumulator, other.tileCount)),
           humidityScratchKgPerKg(allocateBuffer<f32>(other.tileCount)),
+          currentYearTemperatureSumKelvin(copyBuffer(other.currentYearTemperatureSumKelvin, other.tileCount)),
+          currentYearTemperatureMinKelvin(copyBuffer(other.currentYearTemperatureMinKelvin, other.tileCount)),
+          currentYearTemperatureMaxKelvin(copyBuffer(other.currentYearTemperatureMaxKelvin, other.tileCount)),
+          completedAnnualPrecipitation(copyBuffer(other.completedAnnualPrecipitation, other.tileCount)),
+          completedAnnualMeanTemperatureKelvin(copyBuffer(other.completedAnnualMeanTemperatureKelvin, other.tileCount)),
+          completedAnnualTemperatureMinKelvin(copyBuffer(other.completedAnnualTemperatureMinKelvin, other.tileCount)),
+          completedAnnualTemperatureMaxKelvin(copyBuffer(other.completedAnnualTemperatureMaxKelvin, other.tileCount)),
           moistureUpwindEastIndex(allocateBuffer<u32>(other.tileCount)),
           moistureUpwindNorthIndex(allocateBuffer<u32>(other.tileCount)),
           moistureEastWeight(allocateBuffer<f32>(other.tileCount)),
@@ -121,6 +146,8 @@ public:
         absoluteTurnIndex = other.absoluteTurnIndex;
         currentTurnIndex = other.currentTurnIndex;
         currentYearFraction = other.currentYearFraction;
+        currentYearTurnSamples = other.currentYearTurnSamples;
+        completedClimateYears = other.completedClimateYears;
 
         temperatureKelvin = copyBuffer(other.temperatureKelvin, other.tileCount);
         windEastMps = copyBuffer(other.windEastMps, other.tileCount);
@@ -129,6 +156,13 @@ public:
         turnPrecipitation = copyBuffer(other.turnPrecipitation, other.tileCount);
         annualPrecipitationAccumulator = copyBuffer(other.annualPrecipitationAccumulator, other.tileCount);
         humidityScratchKgPerKg = allocateBuffer<f32>(other.tileCount);
+        currentYearTemperatureSumKelvin = copyBuffer(other.currentYearTemperatureSumKelvin, other.tileCount);
+        currentYearTemperatureMinKelvin = copyBuffer(other.currentYearTemperatureMinKelvin, other.tileCount);
+        currentYearTemperatureMaxKelvin = copyBuffer(other.currentYearTemperatureMaxKelvin, other.tileCount);
+        completedAnnualPrecipitation = copyBuffer(other.completedAnnualPrecipitation, other.tileCount);
+        completedAnnualMeanTemperatureKelvin = copyBuffer(other.completedAnnualMeanTemperatureKelvin, other.tileCount);
+        completedAnnualTemperatureMinKelvin = copyBuffer(other.completedAnnualTemperatureMinKelvin, other.tileCount);
+        completedAnnualTemperatureMaxKelvin = copyBuffer(other.completedAnnualTemperatureMaxKelvin, other.tileCount);
         moistureUpwindEastIndex = allocateBuffer<u32>(other.tileCount);
         moistureUpwindNorthIndex = allocateBuffer<u32>(other.tileCount);
         moistureEastWeight = allocateBuffer<f32>(other.tileCount);

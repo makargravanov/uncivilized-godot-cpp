@@ -104,7 +104,20 @@ func _showTileInfo(info: Dictionary):
 	if info.has("precipitation_turn"):
 		lines.append("Осадки (ход): %.5f" % info.get("precipitation_turn", 0.0))
 	if info.has("precipitation_annual"):
-		lines.append("Осадки (год): %.4f" % info.get("precipitation_annual", 0.0))
+		lines.append("Осадки (год, текущие): %.4f" % info.get("precipitation_annual", 0.0))
+	var completed_years: int = int(info.get("climate_years_completed", 0))
+	if completed_years > 0:
+		lines.append("Завершённых лет климата: %d" % completed_years)
+		if info.has("precipitation_annual_completed"):
+			lines.append("Осадки (прошлый год): %.4f" % info.get("precipitation_annual_completed", 0.0))
+		if info.has("temperature_annual_mean_c"):
+			lines.append("T среднегодовая: %.1f°C" % info.get("temperature_annual_mean_c", 0.0))
+		if info.has("temperature_annual_min_c") and info.has("temperature_annual_max_c"):
+			lines.append("T годовая: %.1f..%.1f°C" % [
+				info.get("temperature_annual_min_c", 0.0),
+				info.get("temperature_annual_max_c", 0.0)])
+		if info.has("temperature_annual_amplitude_c"):
+			lines.append("Амплитуда года: %.1f°C" % info.get("temperature_annual_amplitude_c", 0.0))
 	tileInfoLabel.text = "\n".join(lines)
 
 func _updateLabel(mode: int):

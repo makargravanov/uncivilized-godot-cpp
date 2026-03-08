@@ -11,6 +11,7 @@
 
 #include "api-classes/PlayScene.h"
 #include "climate/ClimateState.h"
+#include "climate/ClimateMetricsPass.h"
 #include "climate/MoisturePass.h"
 #include "climate/TemperaturePass.h"
 #include "climate/WindPass.h"
@@ -35,6 +36,7 @@ public:
             TemperaturePass::createInitialState(mapResult.mapResult));
         WindPass::initialize(*climateState);
         MoisturePass::initialize(*climateState);
+        ClimateMetricsPass::initialize(*climateState);
         TemperaturePass::publishToTiles(*climateState, tiles);
         MoisturePass::publishToTiles(*climateState, tiles);
 
@@ -132,6 +134,7 @@ private:
         TemperaturePass::advanceOneTurn(state);
         WindPass::advanceOneTurn(state);
         MoisturePass::advanceOneTurn(state);
+        ClimateMetricsPass::advanceOneTurn(state);
     }
 
     static void discardPendingClimateTurn() {

@@ -16,10 +16,13 @@
 #include "game/climate/TemperaturePass.h"
 #include "game/climate/MoisturePass.h"
 #include "game/climate/ClimateState.h"
+#include "game/climate/ClimateConfig.h"
 #include "game/SystemNexus.h"
 #include "game/map/ViewMode.h"
 
 namespace {
+
+constexpr f32 KELVIN_OFFSET = ClimateSettings::DEFAULT_CLIMATE_CONFIG.shared.kelvinOffset;
 
 constexpr i32 WIND_DEBUG_STRIDE = 2;
 constexpr f32 WIND_DEBUG_BASE_HEIGHT = 0.3f;
@@ -207,6 +210,24 @@ godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float wo
             result["precipitation_turn"] = cs->turnPrecipitation[tileIndex];
         if (cs->annualPrecipitationAccumulator)
             result["precipitation_annual"] = cs->annualPrecipitationAccumulator[tileIndex];
+        result["climate_years_completed"] = static_cast<int>(cs->completedClimateYears);
+        if (cs->completedClimateYears > 0) {
+            if (cs->completedAnnualPrecipitation)
+                result["precipitation_annual_completed"] = cs->completedAnnualPrecipitation[tileIndex];
+            if (cs->completedAnnualMeanTemperatureKelvin)
+                result["temperature_annual_mean_c"] =
+                    cs->completedAnnualMeanTemperatureKelvin[tileIndex] - KELVIN_OFFSET;
+            if (cs->completedAnnualTemperatureMinKelvin)
+                result["temperature_annual_min_c"] =
+                    cs->completedAnnualTemperatureMinKelvin[tileIndex] - KELVIN_OFFSET;
+            if (cs->completedAnnualTemperatureMaxKelvin)
+                result["temperature_annual_max_c"] =
+                    cs->completedAnnualTemperatureMaxKelvin[tileIndex] - KELVIN_OFFSET;
+            if (cs->completedAnnualTemperatureMinKelvin && cs->completedAnnualTemperatureMaxKelvin)
+                result["temperature_annual_amplitude_c"] =
+                    cs->completedAnnualTemperatureMaxKelvin[tileIndex]
+                    - cs->completedAnnualTemperatureMinKelvin[tileIndex];
+        }
     }
 
     return result;

@@ -240,20 +240,6 @@ void applyCondensationAndPrecipitation(ClimateState& climateState) {
     }
 }
 
-void accumulateAnnualPrecipitation(ClimateState& climateState) {
-    const u32 turnInYear = climateState.currentTurnIndex;
-
-    if (turnInYear == 0) {
-        // New year — reset the accumulator.
-        std::memset(climateState.annualPrecipitationAccumulator.get(), 0,
-                     climateState.tileCount * sizeof(f32));
-    }
-
-    for (u32 i = 0; i < climateState.tileCount; ++i) {
-        climateState.annualPrecipitationAccumulator[i] += climateState.turnPrecipitation[i];
-    }
-}
-
 } // namespace
 
 void MoisturePass::initialize(ClimateState& climateState) {
@@ -271,7 +257,6 @@ void MoisturePass::initialize(ClimateState& climateState) {
     }
 
     std::memset(climateState.turnPrecipitation.get(), 0, climateState.tileCount * sizeof(f32));
-    std::memset(climateState.annualPrecipitationAccumulator.get(), 0, climateState.tileCount * sizeof(f32));
     precomputeTransportMetadata(climateState);
 
     // Run several cycles to reach a plausible initial distribution.
@@ -283,12 +268,10 @@ void MoisturePass::initialize(ClimateState& climateState) {
 
     // Clear warmup artifacts, then compute one clean initial precipitation snapshot.
     std::memset(climateState.turnPrecipitation.get(), 0, climateState.tileCount * sizeof(f32));
-    std::memset(climateState.annualPrecipitationAccumulator.get(), 0, climateState.tileCount * sizeof(f32));
 
     applyOceanEvaporation(climateState);
     advectMoisture(climateState);
     applyCondensationAndPrecipitation(climateState);
-    accumulateAnnualPrecipitation(climateState);
 }
 
 void MoisturePass::advanceOneTurn(ClimateState& climateState) {
@@ -301,7 +284,6 @@ void MoisturePass::advanceOneTurn(ClimateState& climateState) {
     applyOceanEvaporation(climateState);
     advectMoisture(climateState);
     applyCondensationAndPrecipitation(climateState);
-    accumulateAnnualPrecipitation(climateState);
 }
 
 void MoisturePass::publishToTiles(const ClimateState& climateState, const std::unique_ptr<TileData[]>& tiles) {
