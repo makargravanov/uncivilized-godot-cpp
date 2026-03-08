@@ -119,7 +119,7 @@ void fragment() {
 		ROUGHNESS = 0.9;
 		METALLIC = 0.0;
 	} else {
-		int biome = clamp(int(biome_id + 0.5), 0, 7);
+		int biome = clamp(int(biome_id + 0.5), 0, 12);
 
 		vec2 noise_uv = world_pos.xz;
 

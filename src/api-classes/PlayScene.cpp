@@ -18,6 +18,7 @@
 #include "game/climate/ClimateState.h"
 #include "game/climate/ClimateConfig.h"
 #include "game/SystemNexus.h"
+#include "game/map/BiomeType.h"
 #include "game/map/ViewMode.h"
 
 namespace {
@@ -135,11 +136,16 @@ void PlayScene::set_view_mode(int mode) {
             }
             return 0.0f;
         };
+    } else if (currentViewMode == VIEW_BIOME) {
+        func = [this](i32 tileIndex) -> f32 {
+            const auto& tile = mapManager->getTile(tileIndex);
+            return static_cast<f32>(tile.biome) / static_cast<f32>(BIOME_TYPE_COUNT - 1);
+        };
     } else if (currentViewMode == VIEW_ELEVATION) {
         // Demo overlay: use raw biome_id normalized to [0,1] as placeholder.
         func = [this](i32 tileIndex) -> f32 {
             const auto& tile = mapManager->getTile(tileIndex);
-            return static_cast<f32>(tile.biome) / 6.0f;
+            return static_cast<f32>(tile.biome) / static_cast<f32>(BIOME_TYPE_COUNT - 1);
         };
     } else if (currentViewMode != VIEW_NORMAL && currentViewMode != VIEW_WIND
                && currentViewMode != VIEW_PRECIPITATION) {

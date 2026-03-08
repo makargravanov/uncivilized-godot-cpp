@@ -8,6 +8,7 @@
 
 #include "game/climate/TemperaturePass.h"
 #include "game/SystemNexus.h"
+#include "BiomeClassifier.h"
 
 namespace {
 
@@ -28,6 +29,32 @@ void refreshMeshOverlay(LandTypeMeshData& meshData, const ViewMode mode, const O
     }
 
     meshData.applyBufferCache();
+}
+
+void refreshMeshBiomeData(
+    LandTypeMeshData& meshData,
+    TileData* tiles,
+    const ViewMode mode,
+    const OverlayFunc& overlayFunc) {
+    if (!tiles) {
+        return;
+    }
+
+    for (i32 index = 0; index < static_cast<i32>(meshData.tileIndices.size()); ++index) {
+        const i32 tileIndex = meshData.tileIndices[index];
+        const TileData& tile = tiles[tileIndex];
+        const f32 overlayValue = (mode != VIEW_NORMAL && overlayFunc)
+            ? overlayFunc(tileIndex)
+            : 0.0f;
+        meshData.setInstanceCustomData(index,
+            godot::Color(
+                static_cast<f32>(tile.biome),
+                static_cast<f32>(tile.river_edges),
+                static_cast<f32>(tile.features),
+                overlayValue));
+    }
+
+    meshData.captureBufferCache();
 }
 
 } // namespace
@@ -332,5 +359,19 @@ void MapManager::updateTemperatureSnapshot(const ClimateState& climateState) {
     if (currentViewMode == VIEW_TEMPERATURE && currentOverlayFunc) {
         setViewMode(currentViewMode, currentOverlayFunc);
     }
+}
+
+bool MapManager::updateBiomeSnapshot(const ClimateState& climateState) {
+    if (!tiles || !BiomeClassifier::classifyFromClimate(climateState, tiles.get(), gridWidth, gridHeight)) {
+        return false;
+    }
+
+    for (auto& [chunkPos, chunk] : loadedChunks) {
+        for (auto& [relief, meshData] : chunk.meshes) {
+            refreshMeshBiomeData(meshData, tiles.get(), currentViewMode, currentOverlayFunc);
+        }
+    }
+
+    return true;
 }
 

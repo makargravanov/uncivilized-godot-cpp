@@ -26,6 +26,7 @@ public:
         discardPendingClimateTurn();
         delete mapManager;
         mapManager = nullptr;
+        appliedClimateBiomeYears = 0;
 
         auto tiles = BiomeClassifier::classify(
             mapResult.discrete,
@@ -60,6 +61,7 @@ public:
 
         advanceClimateStateOneTurn(*climateState);
         mapManager->updateTemperatureSnapshot(*climateState);
+        updateBiomeSnapshotIfNeeded();
     }
 
     static bool requestClimateTurnAsync() {
@@ -98,6 +100,7 @@ public:
 
         if (mapManager) {
             mapManager->updateTemperatureSnapshot(*climateState);
+            updateBiomeSnapshotIfNeeded();
         }
 
         return true;
@@ -137,6 +140,15 @@ private:
         ClimateMetricsPass::advanceOneTurn(state);
     }
 
+    static void updateBiomeSnapshotIfNeeded() {
+        if (!mapManager || !climateState || climateState->completedClimateYears <= appliedClimateBiomeYears) {
+            return;
+        }
+
+        mapManager->updateBiomeSnapshot(*climateState);
+        appliedClimateBiomeYears = climateState->completedClimateYears;
+    }
+
     static void discardPendingClimateTurn() {
         if (pendingClimateTurn.valid()) {
             pendingClimateTurn.wait();
@@ -149,6 +161,7 @@ private:
     static std::unique_ptr<ClimateState> climateState;
     static std::future<ClimateState> pendingClimateTurn;
     static bool climateTurnInProgress;
+    static u32 appliedClimateBiomeYears;
     static PlayScene* play;
 };
 

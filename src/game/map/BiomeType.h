@@ -17,11 +17,23 @@ enum BiomeType : u8 {
     BIOME_GRASSLAND          = 4,
     BIOME_HIGHLAND           = 5,
     BIOME_ALPINE             = 6,
+    BIOME_TUNDRA             = 7,
+    BIOME_BOREAL_FOREST      = 8,
+    BIOME_TEMPERATE_FOREST   = 9,
+    BIOME_SAVANNA            = 10,
+    BIOME_DESERT             = 11,
+    BIOME_TROPICAL_FOREST    = 12,
     BIOME_TYPE_COUNT
 };
 
 inline bool isWaterBiome(BiomeType b) {
     return b <= BIOME_SHALLOW_INLAND_SEA;
+}
+
+inline bool isForestBiome(BiomeType b) {
+    return b == BIOME_BOREAL_FOREST
+        || b == BIOME_TEMPERATE_FOREST
+        || b == BIOME_TROPICAL_FOREST;
 }
 
 #endif //BIOMETYPE_H
