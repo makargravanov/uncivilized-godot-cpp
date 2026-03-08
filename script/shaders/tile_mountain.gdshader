@@ -110,6 +110,31 @@ const vec3 ROCK_ALT_COLOR = vec3(0.38, 0.35, 0.30);
 const vec3 SNOW_COLOR     = vec3(0.95, 0.96, 0.98);
 const vec3 GRASS_COLOR    = vec3(0.30, 0.38, 0.18);
 
+vec3 get_mountain_vegetation_color(int biome) {
+	if (biome == 4) { return vec3(0.64, 0.62, 0.58); } // POLAR_DESERT
+	if (biome == 5) { return vec3(0.52, 0.58, 0.48); } // TUNDRA
+	if (biome == 6) { return vec3(0.14, 0.22, 0.12); } // BOREAL_FOREST
+	if (biome == 7) { return vec3(0.56, 0.52, 0.33); } // COLD_STEPPE
+	if (biome == 8) { return vec3(0.22, 0.38, 0.16); } // TEMPERATE_FOREST
+	if (biome == 9) { return vec3(0.60, 0.56, 0.27); } // TEMPERATE_STEPPE
+	if (biome == 10) { return vec3(0.50, 0.44, 0.26); } // XERIC_SHRUBLAND
+	if (biome == 11) { return vec3(0.69, 0.58, 0.35); } // HOT_DESERT
+	if (biome == 12) { return vec3(0.57, 0.53, 0.22); } // SAVANNA
+	if (biome == 13) { return vec3(0.16, 0.31, 0.13); } // TROPICAL_SEASONAL_FOREST
+	if (biome == 14) { return vec3(0.08, 0.24, 0.10); } // TROPICAL_RAINFOREST
+	return GRASS_COLOR;
+}
+
+float get_mountain_vegetation_strength(int biome) {
+	if (biome == 4 || biome == 11) { return 0.08; }
+	if (biome == 10) { return 0.15; }
+	if (biome == 7 || biome == 9) { return 0.24; }
+	if (biome == 5) { return 0.20; }
+	if (biome == 12) { return 0.30; }
+	if (biome == 6 || biome == 8 || biome == 13 || biome == 14) { return 0.42; }
+	return 0.18;
+}
+
 // ── Fragment ─────────────────────────────────────────────────────
 
 void fragment() {
@@ -119,7 +144,7 @@ void fragment() {
 		ROUGHNESS = 0.9;
 		METALLIC = 0.0;
 	} else {
-		int biome = clamp(int(biome_id + 0.5), 0, 12);
+		int biome = clamp(int(biome_id + 0.5), 0, 15);
 
 		vec2 noise_uv = world_pos.xz;
 
@@ -140,24 +165,20 @@ void fragment() {
 		vec3 color;
 		float roughness;
 
-		if (biome == 6) {
+		if (biome == 15) {
 			// ALPINE — snow on flat surfaces, exposed rock on steep slopes.
 			float snow_noise = value_noise(noise_uv * 1.2) * 0.15;
 			float snow_factor = smoothstep(0.55, 0.75, slope + snow_noise);
 			color = mix(rock, SNOW_COLOR, snow_factor);
 			roughness = mix(0.9, 0.6, snow_factor);  // snow is smoother
-		} else if (biome == 5) {
-			// HIGHLAND — grass on flat tops, rock on steep sides.
-			vec3 grass = GRASS_COLOR + (large_noise - 0.5) * 0.04;
-			float grass_factor = smoothstep(0.5, 0.8, slope);
-			color = mix(rock, grass, grass_factor);
-			roughness = mix(0.9, 0.85, grass_factor);
 		} else {
-			// Generic mountain — rock with subtle moss on flat surfaces.
-			vec3 moss = vec3(0.28, 0.32, 0.22);
-			float moss_factor = smoothstep(0.6, 0.85, slope) * large_noise * 0.4;
-			color = mix(rock, moss, moss_factor);
-			roughness = 0.9;
+			// Non-alpine mountains inherit a weak vegetation tint from the biome,
+			// while steep slopes stay mostly bare rock.
+			vec3 vegetation = get_mountain_vegetation_color(biome) + (large_noise - 0.5) * 0.04;
+			float vegetation_factor =
+				smoothstep(0.55, 0.85, slope) * get_mountain_vegetation_strength(biome);
+			color = mix(rock, vegetation, vegetation_factor);
+			roughness = mix(0.9, 0.84, vegetation_factor);
 		}
 
 		ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));

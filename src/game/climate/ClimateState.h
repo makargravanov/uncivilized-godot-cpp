@@ -5,10 +5,13 @@
 #ifndef CLIMATESTATE_H
 #define CLIMATESTATE_H
 
+#include <array>
 #include <cstring>
 #include <memory>
 
 #include "util/declarations.h"
+
+constexpr u32 CLIMATE_QUARTER_COUNT = 4;
 
 struct ClimateState {
 private:
@@ -32,6 +35,26 @@ private:
         return std::make_unique<T[]>(count);
     }
 
+    template <typename T, std::size_t N>
+    static std::array<std::unique_ptr<T[]>, N> copyBufferArray(
+        const std::array<std::unique_ptr<T[]>, N>& source,
+        const u32 count) {
+        std::array<std::unique_ptr<T[]>, N> destination {};
+        for (std::size_t index = 0; index < N; ++index) {
+            destination[index] = copyBuffer(source[index], count);
+        }
+        return destination;
+    }
+
+    template <typename T, std::size_t N>
+    static std::array<std::unique_ptr<T[]>, N> allocateBufferArray(const u32 count) {
+        std::array<std::unique_ptr<T[]>, N> destination {};
+        for (std::size_t index = 0; index < N; ++index) {
+            destination[index] = allocateBuffer<T>(count);
+        }
+        return destination;
+    }
+
 public:
     u32 gridWidth = 0;
     u32 gridHeight = 0;
@@ -41,6 +64,7 @@ public:
     u32 currentTurnIndex = 0;
     f32 currentYearFraction = 0.0f;
     u32 currentYearTurnSamples = 0;
+    std::array<u32, CLIMATE_QUARTER_COUNT> currentQuarterTurnSamples {};
     u32 completedClimateYears = 0;
 
     // SoA buffers for the current climate state.
@@ -54,10 +78,16 @@ public:
     std::unique_ptr<f32[]> currentYearTemperatureSumKelvin;
     std::unique_ptr<f32[]> currentYearTemperatureMinKelvin;
     std::unique_ptr<f32[]> currentYearTemperatureMaxKelvin;
+    std::array<std::unique_ptr<f32[]>, CLIMATE_QUARTER_COUNT> currentQuarterTemperatureSumKelvin;
+    std::array<std::unique_ptr<f32[]>, CLIMATE_QUARTER_COUNT> currentQuarterPrecipitationAccumulator;
     std::unique_ptr<f32[]> completedAnnualPrecipitation;
     std::unique_ptr<f32[]> completedAnnualMeanTemperatureKelvin;
     std::unique_ptr<f32[]> completedAnnualTemperatureMinKelvin;
     std::unique_ptr<f32[]> completedAnnualTemperatureMaxKelvin;
+    std::unique_ptr<f32[]> completedColdestQuarterMeanTemperatureKelvin;
+    std::unique_ptr<f32[]> completedWarmestQuarterMeanTemperatureKelvin;
+    std::unique_ptr<f32[]> completedDriestQuarterPrecipitation;
+    std::unique_ptr<f32[]> completedWettestQuarterPrecipitation;
     std::unique_ptr<u32[]> moistureUpwindEastIndex;
     std::unique_ptr<u32[]> moistureUpwindNorthIndex;
     std::unique_ptr<f32[]> moistureEastWeight;
@@ -84,13 +114,19 @@ public:
           turnPrecipitation(std::make_unique<f32[]>(tileCount)),
           annualPrecipitationAccumulator(std::make_unique<f32[]>(tileCount)),
           humidityScratchKgPerKg(std::make_unique<f32[]>(tileCount)),
-                      currentYearTemperatureSumKelvin(std::make_unique<f32[]>(tileCount)),
-                      currentYearTemperatureMinKelvin(std::make_unique<f32[]>(tileCount)),
-                      currentYearTemperatureMaxKelvin(std::make_unique<f32[]>(tileCount)),
-                      completedAnnualPrecipitation(std::make_unique<f32[]>(tileCount)),
-                      completedAnnualMeanTemperatureKelvin(std::make_unique<f32[]>(tileCount)),
-                      completedAnnualTemperatureMinKelvin(std::make_unique<f32[]>(tileCount)),
-                      completedAnnualTemperatureMaxKelvin(std::make_unique<f32[]>(tileCount)),
+          currentYearTemperatureSumKelvin(std::make_unique<f32[]>(tileCount)),
+          currentYearTemperatureMinKelvin(std::make_unique<f32[]>(tileCount)),
+          currentYearTemperatureMaxKelvin(std::make_unique<f32[]>(tileCount)),
+          currentQuarterTemperatureSumKelvin(allocateBufferArray<f32, CLIMATE_QUARTER_COUNT>(tileCount)),
+          currentQuarterPrecipitationAccumulator(allocateBufferArray<f32, CLIMATE_QUARTER_COUNT>(tileCount)),
+          completedAnnualPrecipitation(std::make_unique<f32[]>(tileCount)),
+          completedAnnualMeanTemperatureKelvin(std::make_unique<f32[]>(tileCount)),
+          completedAnnualTemperatureMinKelvin(std::make_unique<f32[]>(tileCount)),
+          completedAnnualTemperatureMaxKelvin(std::make_unique<f32[]>(tileCount)),
+          completedColdestQuarterMeanTemperatureKelvin(std::make_unique<f32[]>(tileCount)),
+          completedWarmestQuarterMeanTemperatureKelvin(std::make_unique<f32[]>(tileCount)),
+          completedDriestQuarterPrecipitation(std::make_unique<f32[]>(tileCount)),
+          completedWettestQuarterPrecipitation(std::make_unique<f32[]>(tileCount)),
           moistureUpwindEastIndex(std::make_unique<u32[]>(tileCount)),
           moistureUpwindNorthIndex(std::make_unique<u32[]>(tileCount)),
           moistureEastWeight(std::make_unique<f32[]>(tileCount)),
@@ -108,6 +144,7 @@ public:
           currentTurnIndex(other.currentTurnIndex),
           currentYearFraction(other.currentYearFraction),
           currentYearTurnSamples(other.currentYearTurnSamples),
+          currentQuarterTurnSamples(other.currentQuarterTurnSamples),
           completedClimateYears(other.completedClimateYears),
           temperatureKelvin(copyBuffer(other.temperatureKelvin, other.tileCount)),
           windEastMps(copyBuffer(other.windEastMps, other.tileCount)),
@@ -119,10 +156,24 @@ public:
           currentYearTemperatureSumKelvin(copyBuffer(other.currentYearTemperatureSumKelvin, other.tileCount)),
           currentYearTemperatureMinKelvin(copyBuffer(other.currentYearTemperatureMinKelvin, other.tileCount)),
           currentYearTemperatureMaxKelvin(copyBuffer(other.currentYearTemperatureMaxKelvin, other.tileCount)),
+          currentQuarterTemperatureSumKelvin(copyBufferArray<f32, CLIMATE_QUARTER_COUNT>(
+              other.currentQuarterTemperatureSumKelvin,
+              other.tileCount)),
+          currentQuarterPrecipitationAccumulator(copyBufferArray<f32, CLIMATE_QUARTER_COUNT>(
+              other.currentQuarterPrecipitationAccumulator,
+              other.tileCount)),
           completedAnnualPrecipitation(copyBuffer(other.completedAnnualPrecipitation, other.tileCount)),
           completedAnnualMeanTemperatureKelvin(copyBuffer(other.completedAnnualMeanTemperatureKelvin, other.tileCount)),
           completedAnnualTemperatureMinKelvin(copyBuffer(other.completedAnnualTemperatureMinKelvin, other.tileCount)),
           completedAnnualTemperatureMaxKelvin(copyBuffer(other.completedAnnualTemperatureMaxKelvin, other.tileCount)),
+          completedColdestQuarterMeanTemperatureKelvin(copyBuffer(
+              other.completedColdestQuarterMeanTemperatureKelvin,
+              other.tileCount)),
+          completedWarmestQuarterMeanTemperatureKelvin(copyBuffer(
+              other.completedWarmestQuarterMeanTemperatureKelvin,
+              other.tileCount)),
+          completedDriestQuarterPrecipitation(copyBuffer(other.completedDriestQuarterPrecipitation, other.tileCount)),
+          completedWettestQuarterPrecipitation(copyBuffer(other.completedWettestQuarterPrecipitation, other.tileCount)),
           moistureUpwindEastIndex(allocateBuffer<u32>(other.tileCount)),
           moistureUpwindNorthIndex(allocateBuffer<u32>(other.tileCount)),
           moistureEastWeight(allocateBuffer<f32>(other.tileCount)),
@@ -147,6 +198,7 @@ public:
         currentTurnIndex = other.currentTurnIndex;
         currentYearFraction = other.currentYearFraction;
         currentYearTurnSamples = other.currentYearTurnSamples;
+        currentQuarterTurnSamples = other.currentQuarterTurnSamples;
         completedClimateYears = other.completedClimateYears;
 
         temperatureKelvin = copyBuffer(other.temperatureKelvin, other.tileCount);
@@ -159,10 +211,24 @@ public:
         currentYearTemperatureSumKelvin = copyBuffer(other.currentYearTemperatureSumKelvin, other.tileCount);
         currentYearTemperatureMinKelvin = copyBuffer(other.currentYearTemperatureMinKelvin, other.tileCount);
         currentYearTemperatureMaxKelvin = copyBuffer(other.currentYearTemperatureMaxKelvin, other.tileCount);
+        currentQuarterTemperatureSumKelvin = copyBufferArray<f32, CLIMATE_QUARTER_COUNT>(
+            other.currentQuarterTemperatureSumKelvin,
+            other.tileCount);
+        currentQuarterPrecipitationAccumulator = copyBufferArray<f32, CLIMATE_QUARTER_COUNT>(
+            other.currentQuarterPrecipitationAccumulator,
+            other.tileCount);
         completedAnnualPrecipitation = copyBuffer(other.completedAnnualPrecipitation, other.tileCount);
         completedAnnualMeanTemperatureKelvin = copyBuffer(other.completedAnnualMeanTemperatureKelvin, other.tileCount);
         completedAnnualTemperatureMinKelvin = copyBuffer(other.completedAnnualTemperatureMinKelvin, other.tileCount);
         completedAnnualTemperatureMaxKelvin = copyBuffer(other.completedAnnualTemperatureMaxKelvin, other.tileCount);
+        completedColdestQuarterMeanTemperatureKelvin = copyBuffer(
+            other.completedColdestQuarterMeanTemperatureKelvin,
+            other.tileCount);
+        completedWarmestQuarterMeanTemperatureKelvin = copyBuffer(
+            other.completedWarmestQuarterMeanTemperatureKelvin,
+            other.tileCount);
+        completedDriestQuarterPrecipitation = copyBuffer(other.completedDriestQuarterPrecipitation, other.tileCount);
+        completedWettestQuarterPrecipitation = copyBuffer(other.completedWettestQuarterPrecipitation, other.tileCount);
         moistureUpwindEastIndex = allocateBuffer<u32>(other.tileCount);
         moistureUpwindNorthIndex = allocateBuffer<u32>(other.tileCount);
         moistureEastWeight = allocateBuffer<f32>(other.tileCount);

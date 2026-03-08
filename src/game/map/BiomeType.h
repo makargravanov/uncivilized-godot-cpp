@@ -14,15 +14,18 @@ enum BiomeType : u8 {
     BIOME_SHALLOW_OCEAN      = 1,
     BIOME_INLAND_SEA         = 2,
     BIOME_SHALLOW_INLAND_SEA = 3,
-    BIOME_GRASSLAND          = 4,
-    BIOME_HIGHLAND           = 5,
-    BIOME_ALPINE             = 6,
-    BIOME_TUNDRA             = 7,
-    BIOME_BOREAL_FOREST      = 8,
-    BIOME_TEMPERATE_FOREST   = 9,
-    BIOME_SAVANNA            = 10,
-    BIOME_DESERT             = 11,
-    BIOME_TROPICAL_FOREST    = 12,
+    BIOME_POLAR_DESERT       = 4,
+    BIOME_TUNDRA             = 5,
+    BIOME_BOREAL_FOREST      = 6,
+    BIOME_COLD_STEPPE        = 7,
+    BIOME_TEMPERATE_FOREST   = 8,
+    BIOME_TEMPERATE_STEPPE   = 9,
+    BIOME_XERIC_SHRUBLAND    = 10,
+    BIOME_HOT_DESERT         = 11,
+    BIOME_SAVANNA            = 12,
+    BIOME_TROPICAL_SEASONAL_FOREST = 13,
+    BIOME_TROPICAL_RAINFOREST = 14,
+    BIOME_ALPINE             = 15,
     BIOME_TYPE_COUNT
 };
 
@@ -33,7 +36,8 @@ inline bool isWaterBiome(BiomeType b) {
 inline bool isForestBiome(BiomeType b) {
     return b == BIOME_BOREAL_FOREST
         || b == BIOME_TEMPERATE_FOREST
-        || b == BIOME_TROPICAL_FOREST;
+    || b == BIOME_TROPICAL_SEASONAL_FOREST
+    || b == BIOME_TROPICAL_RAINFOREST;
 }
 
 #endif //BIOMETYPE_H

@@ -120,30 +120,36 @@ float fbm2(vec2 p) {
 // ── Biome colour palette ─────────────────────────────────────────
 
 vec3 get_biome_base_color(int biome) {
-	if (biome == 4) { return vec3(0.537, 0.628, 0.210); } // GRASSLAND
-	if (biome == 5) { return vec3(0.250, 0.336, 0.153); } // HIGHLAND
-	if (biome == 6) { return vec3(0.82, 0.82, 0.78); } // ALPINE
-	if (biome == 7) { return vec3(0.62, 0.66, 0.54); } // TUNDRA
-	if (biome == 8) { return vec3(0.19, 0.29, 0.16); } // BOREAL_FOREST
-	if (biome == 9) { return vec3(0.24, 0.45, 0.18); } // TEMPERATE_FOREST
-	if (biome == 10) { return vec3(0.66, 0.64, 0.28); } // SAVANNA
-	if (biome == 11) { return vec3(0.78, 0.68, 0.44); } // DESERT
-	if (biome == 12) { return vec3(0.10, 0.36, 0.14); } // TROPICAL_FOREST
-	return vec3(0.537, 0.628, 0.210);                      // fallback
+	if (biome == 4) { return vec3(0.73, 0.71, 0.66); } // POLAR_DESERT
+	if (biome == 5) { return vec3(0.60, 0.65, 0.54); } // TUNDRA
+	if (biome == 6) { return vec3(0.17, 0.27, 0.15); } // BOREAL_FOREST
+	if (biome == 7) { return vec3(0.66, 0.62, 0.41); } // COLD_STEPPE
+	if (biome == 8) { return vec3(0.24, 0.45, 0.18); } // TEMPERATE_FOREST
+	if (biome == 9) { return vec3(0.72, 0.69, 0.36); } // TEMPERATE_STEPPE
+	if (biome == 10) { return vec3(0.61, 0.53, 0.32); } // XERIC_SHRUBLAND
+	if (biome == 11) { return vec3(0.80, 0.69, 0.43); } // HOT_DESERT
+	if (biome == 12) { return vec3(0.70, 0.65, 0.26); } // SAVANNA
+	if (biome == 13) { return vec3(0.19, 0.38, 0.15); } // TROPICAL_SEASONAL_FOREST
+	if (biome == 14) { return vec3(0.08, 0.31, 0.13); } // TROPICAL_RAINFOREST
+	if (biome == 15) { return vec3(0.82, 0.82, 0.78); } // ALPINE
+	return vec3(0.24, 0.45, 0.18);                      // fallback
 }
 
 // Secondary colour for noise blending — slightly shifted hue.
 vec3 get_biome_alt_color(int biome) {
-	if (biome == 4) { return vec3(0.420, 0.550, 0.180); } // GRASSLAND — darker olive
-	if (biome == 5) { return vec3(0.200, 0.280, 0.120); } // HIGHLAND — darker forest
-	if (biome == 6) { return vec3(0.72, 0.74, 0.70); } // ALPINE — light rock
-	if (biome == 7) { return vec3(0.52, 0.58, 0.48); } // TUNDRA — colder moss
-	if (biome == 8) { return vec3(0.13, 0.22, 0.12); } // BOREAL_FOREST — deeper pine
-	if (biome == 9) { return vec3(0.18, 0.36, 0.14); } // TEMPERATE_FOREST — darker canopy
-	if (biome == 10) { return vec3(0.58, 0.56, 0.22); } // SAVANNA — drier yellow-green
-	if (biome == 11) { return vec3(0.69, 0.58, 0.36); } // DESERT — darker sand
-	if (biome == 12) { return vec3(0.07, 0.28, 0.11); } // TROPICAL_FOREST — deep jungle
-	return vec3(0.420, 0.550, 0.180);
+	if (biome == 4) { return vec3(0.64, 0.62, 0.58); } // POLAR_DESERT — colder stone
+	if (biome == 5) { return vec3(0.51, 0.57, 0.47); } // TUNDRA — darker moss
+	if (biome == 6) { return vec3(0.12, 0.20, 0.11); } // BOREAL_FOREST — deeper pine
+	if (biome == 7) { return vec3(0.56, 0.52, 0.33); } // COLD_STEPPE — dusty grass
+	if (biome == 8) { return vec3(0.18, 0.36, 0.14); } // TEMPERATE_FOREST — darker canopy
+	if (biome == 9) { return vec3(0.62, 0.58, 0.28); } // TEMPERATE_STEPPE — drier yellow
+	if (biome == 10) { return vec3(0.52, 0.46, 0.28); } // XERIC_SHRUBLAND — scrub brown
+	if (biome == 11) { return vec3(0.70, 0.58, 0.34); } // HOT_DESERT — darker sand
+	if (biome == 12) { return vec3(0.60, 0.55, 0.21); } // SAVANNA — drier yellow-green
+	if (biome == 13) { return vec3(0.13, 0.30, 0.12); } // TROPICAL_SEASONAL_FOREST — humid dark green
+	if (biome == 14) { return vec3(0.05, 0.24, 0.10); } // TROPICAL_RAINFOREST — deep jungle
+	if (biome == 15) { return vec3(0.72, 0.74, 0.70); } // ALPINE — light rock
+	return vec3(0.18, 0.36, 0.14);
 }
 
 // ── Fragment ─────────────────────────────────────────────────────
@@ -155,7 +161,7 @@ void fragment() {
 		ROUGHNESS = 0.9;
 		METALLIC = 0.0;
 	} else {
-		int biome = clamp(int(biome_id + 0.5), 0, 12);
+		int biome = clamp(int(biome_id + 0.5), 0, 15);
 
 		vec3 base_col = get_biome_base_color(biome);
 		vec3 alt_col  = get_biome_alt_color(biome);

@@ -233,6 +233,22 @@ godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float wo
                 result["temperature_annual_amplitude_c"] =
                     cs->completedAnnualTemperatureMaxKelvin[tileIndex]
                     - cs->completedAnnualTemperatureMinKelvin[tileIndex];
+            if (cs->completedColdestQuarterMeanTemperatureKelvin)
+                result["temperature_coldest_quarter_c"] =
+                    cs->completedColdestQuarterMeanTemperatureKelvin[tileIndex] - KELVIN_OFFSET;
+            if (cs->completedWarmestQuarterMeanTemperatureKelvin)
+                result["temperature_warmest_quarter_c"] =
+                    cs->completedWarmestQuarterMeanTemperatureKelvin[tileIndex] - KELVIN_OFFSET;
+            if (cs->completedDriestQuarterPrecipitation)
+                result["precipitation_driest_quarter"] =
+                    cs->completedDriestQuarterPrecipitation[tileIndex];
+            if (cs->completedWettestQuarterPrecipitation)
+                result["precipitation_wettest_quarter"] =
+                    cs->completedWettestQuarterPrecipitation[tileIndex];
+            if (cs->completedDriestQuarterPrecipitation && cs->completedWettestQuarterPrecipitation)
+                result["precipitation_seasonality_ratio"] =
+                    cs->completedWettestQuarterPrecipitation[tileIndex]
+                    / std::max(cs->completedDriestQuarterPrecipitation[tileIndex], 1e-4f);
         }
     }
 

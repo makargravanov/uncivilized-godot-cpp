@@ -34,9 +34,11 @@ const RELIEF_NAMES := {
 
 const BIOME_NAMES := {
 	0: "Глубокий океан", 1: "Мелкий океан", 2: "Внутреннее море",
-	3: "Мелк. внутреннее море", 4: "Луг", 5: "Нагорье", 6: "Альпийский",
-	7: "Тундра", 8: "Тайга", 9: "Умеренный лес",
-	10: "Саванна", 11: "Пустыня", 12: "Тропический лес",
+	3: "Мелк. внутреннее море", 4: "Полярная пустошь", 5: "Тундра",
+	6: "Тайга", 7: "Холодная степь", 8: "Умеренный лес",
+	9: "Умеренная степь", 10: "Сухие кустарники", 11: "Жаркая пустыня",
+	12: "Саванна", 13: "Сезонный тропический лес",
+	14: "Влажный тропический лес", 15: "Альпийский пояс",
 }
 
 @onready var playScene = $PlayScene
@@ -120,6 +122,16 @@ func _showTileInfo(info: Dictionary):
 				info.get("temperature_annual_max_c", 0.0)])
 		if info.has("temperature_annual_amplitude_c"):
 			lines.append("Амплитуда года: %.1f°C" % info.get("temperature_annual_amplitude_c", 0.0))
+		if info.has("temperature_coldest_quarter_c"):
+			lines.append("T холодной четверти: %.1f°C" % info.get("temperature_coldest_quarter_c", 0.0))
+		if info.has("temperature_warmest_quarter_c"):
+			lines.append("T тёплой четверти: %.1f°C" % info.get("temperature_warmest_quarter_c", 0.0))
+		if info.has("precipitation_driest_quarter"):
+			lines.append("Осадки сухой четверти: %.4f" % info.get("precipitation_driest_quarter", 0.0))
+		if info.has("precipitation_wettest_quarter"):
+			lines.append("Осадки влажной четверти: %.4f" % info.get("precipitation_wettest_quarter", 0.0))
+		if info.has("precipitation_seasonality_ratio"):
+			lines.append("Контраст осадков: %.1fx" % info.get("precipitation_seasonality_ratio", 0.0))
 	tileInfoLabel.text = "\n".join(lines)
 
 func _updateLabel(mode: int):
