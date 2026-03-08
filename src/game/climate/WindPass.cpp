@@ -8,39 +8,11 @@
 #include <cmath>
 
 #include "Astrophysics.h"
+#include "ClimateConfig.h"
 
 namespace {
 
-// The ITCZ tracks the subsolar point (solar declination) but with damping.
-// At Earth-like obliquity ~23°, observed ITCZ shift is ~8°, giving a ratio ~0.35.
-constexpr f32 ITCZ_DECLINATION_TRACKING_FRACTION = 0.35f;
-constexpr f32 CALM_EQUATOR_RADIANS = static_cast<f32>(6.0 * Astro::DEG_TO_RAD);
-constexpr f32 BAND_FADE_RADIANS = static_cast<f32>(7.0 * Astro::DEG_TO_RAD);
-constexpr f32 TRADE_BAND_START_RADIANS = static_cast<f32>(4.0 * Astro::DEG_TO_RAD);
-constexpr f32 TRADE_BAND_END_RADIANS = static_cast<f32>(30.0 * Astro::DEG_TO_RAD);
-constexpr f32 WESTERLY_BAND_START_RADIANS = static_cast<f32>(24.0 * Astro::DEG_TO_RAD);
-constexpr f32 WESTERLY_BAND_END_RADIANS = static_cast<f32>(60.0 * Astro::DEG_TO_RAD);
-constexpr f32 POLAR_BAND_START_RADIANS = static_cast<f32>(56.0 * Astro::DEG_TO_RAD);
-constexpr f32 POLAR_BAND_END_RADIANS = static_cast<f32>(86.0 * Astro::DEG_TO_RAD);
-
-constexpr f32 TRADE_WIND_EAST_MPS = -8.0f;
-constexpr f32 WESTERLY_WIND_EAST_MPS = 11.0f;
-constexpr f32 POLAR_EASTERLY_WIND_EAST_MPS = -5.0f;
-
-constexpr f32 TRADE_WIND_MERIDIONAL_MPS = 3.5f;
-constexpr f32 WESTERLY_WIND_MERIDIONAL_MPS = 2.75f;
-constexpr f32 POLAR_EASTERLY_WIND_MERIDIONAL_MPS = 1.75f;
-
-constexpr f32 TILE_STEP_X = 173.205078f / 100.0f;
-constexpr f32 TILE_STEP_Z = 150.0f / 100.0f;
-constexpr f32 OROGRAPHIC_DRAG_FACTOR = 2.8f;
-constexpr f32 MAX_OROGRAPHIC_DRAG = 0.7f;
-constexpr f32 OROGRAPHIC_DEFLECTION_FACTOR = 4.4f;
-constexpr f32 MAX_OROGRAPHIC_DEFLECTION = 0.6f;
-constexpr f32 MIN_WIND_SPEED_MPS = 1e-3f;
-constexpr f32 MIN_GRADIENT_MAGNITUDE = 1e-4f;
-
-constexpr f32 EPSILON_LATITUDE = 1e-4f;
+constexpr ClimateSettings::ClimateConfig CONFIG = ClimateSettings::DEFAULT_CLIMATE_CONFIG;
 
 f32 smoothStep(const f32 edge0, const f32 edge1, const f32 value) {
     if (value <= edge0) {
@@ -61,10 +33,10 @@ f32 smoothWindow(const f32 value, const f32 start, const f32 end, const f32 fade
 }
 
 f32 getHemisphereSign(const f32 latitudeRadians) {
-    if (latitudeRadians > EPSILON_LATITUDE) {
+    if (latitudeRadians > CONFIG.wind.equatorLatitudeEpsilonRadians) {
         return 1.0f;
     }
-    if (latitudeRadians < -EPSILON_LATITUDE) {
+    if (latitudeRadians < -CONFIG.wind.equatorLatitudeEpsilonRadians) {
         return -1.0f;
     }
     return 0.0f;
@@ -74,7 +46,7 @@ f32 getSeasonalLatitudeShift(const f32 yearFraction) {
     const Astro::OrbitalParams orbitalParams;
     const auto orbitState = Astro::Astrophysics::calculateOrbitStateByYearFraction(
         orbitalParams, static_cast<f64>(yearFraction));
-    return static_cast<f32>(orbitState.declination) * ITCZ_DECLINATION_TRACKING_FRACTION;
+    return static_cast<f32>(orbitState.declination) * CONFIG.wind.itczDeclinationTrackingFraction;
 }
 
 u32 wrapColumn(const i32 column, const u32 width) {
@@ -96,7 +68,7 @@ f32 sampleRelativeAltitude(const ClimateState& climateState, const i32 column, c
 f32 computeAltitudeGradientX(const ClimateState& climateState, const u32 column, const u32 row) {
     const f32 leftHeight = sampleRelativeAltitude(climateState, static_cast<i32>(column) - 1, static_cast<i32>(row));
     const f32 rightHeight = sampleRelativeAltitude(climateState, static_cast<i32>(column) + 1, static_cast<i32>(row));
-    return (rightHeight - leftHeight) / (2.0f * TILE_STEP_X);
+    return (rightHeight - leftHeight) / (2.0f * CONFIG.shared.tileStepX);
 }
 
 f32 computeAltitudeGradientZ(const ClimateState& climateState, const u32 column, const u32 row) {
@@ -106,18 +78,18 @@ f32 computeAltitudeGradientZ(const ClimateState& climateState, const u32 column,
     if (row == 0) {
         const f32 currentHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow);
         const f32 nextHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow + 1);
-        return (nextHeight - currentHeight) / TILE_STEP_Z;
+        return (nextHeight - currentHeight) / CONFIG.shared.tileStepZ;
     }
 
     if (row + 1 >= climateState.gridHeight) {
         const f32 currentHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow);
         const f32 previousHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow - 1);
-        return (currentHeight - previousHeight) / TILE_STEP_Z;
+        return (currentHeight - previousHeight) / CONFIG.shared.tileStepZ;
     }
 
     const f32 previousHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow - 1);
     const f32 nextHeight = sampleRelativeAltitude(climateState, signedColumn, signedRow + 1);
-    return (nextHeight - previousHeight) / (2.0f * TILE_STEP_Z);
+    return (nextHeight - previousHeight) / (2.0f * CONFIG.shared.tileStepZ);
 }
 
 f32 vectorLength(const f32 x, const f32 z) {
@@ -130,6 +102,14 @@ void applyLatitudeCirculation(ClimateState& climateState) {
     }
 
     const f32 seasonalShift = getSeasonalLatitudeShift(climateState.currentYearFraction);
+    const f32 calmEquatorRadians = ClimateSettings::toRadians(CONFIG.wind.calmEquatorDegrees);
+    const f32 bandFadeRadians = ClimateSettings::toRadians(CONFIG.wind.bandFadeDegrees);
+    const f32 tradeBandStartRadians = ClimateSettings::toRadians(CONFIG.wind.tradeBandStartDegrees);
+    const f32 tradeBandEndRadians = ClimateSettings::toRadians(CONFIG.wind.tradeBandEndDegrees);
+    const f32 westerlyBandStartRadians = ClimateSettings::toRadians(CONFIG.wind.westerlyBandStartDegrees);
+    const f32 westerlyBandEndRadians = ClimateSettings::toRadians(CONFIG.wind.westerlyBandEndDegrees);
+    const f32 polarBandStartRadians = ClimateSettings::toRadians(CONFIG.wind.polarBandStartDegrees);
+    const f32 polarBandEndRadians = ClimateSettings::toRadians(CONFIG.wind.polarBandEndDegrees);
 
     for (u32 index = 0; index < climateState.tileCount; ++index) {
         const f32 shiftedLatitude = std::clamp(
@@ -139,32 +119,32 @@ void applyLatitudeCirculation(ClimateState& climateState) {
         const f32 absoluteLatitude = std::abs(shiftedLatitude);
         const f32 hemisphereSign = getHemisphereSign(shiftedLatitude);
 
-        const f32 doldrumFade = smoothStep(CALM_EQUATOR_RADIANS * 0.5f, CALM_EQUATOR_RADIANS, absoluteLatitude);
+        const f32 doldrumFade = smoothStep(calmEquatorRadians * 0.5f, calmEquatorRadians, absoluteLatitude);
         const f32 tradeWeight = smoothWindow(
             absoluteLatitude,
-            TRADE_BAND_START_RADIANS,
-            TRADE_BAND_END_RADIANS,
-            BAND_FADE_RADIANS) * doldrumFade;
+            tradeBandStartRadians,
+            tradeBandEndRadians,
+            bandFadeRadians) * doldrumFade;
         const f32 westerlyWeight = smoothWindow(
             absoluteLatitude,
-            WESTERLY_BAND_START_RADIANS,
-            WESTERLY_BAND_END_RADIANS,
-            BAND_FADE_RADIANS);
+            westerlyBandStartRadians,
+            westerlyBandEndRadians,
+            bandFadeRadians);
         const f32 polarWeight = smoothWindow(
             absoluteLatitude,
-            POLAR_BAND_START_RADIANS,
-            POLAR_BAND_END_RADIANS,
-            BAND_FADE_RADIANS);
+            polarBandStartRadians,
+            polarBandEndRadians,
+            bandFadeRadians);
 
         climateState.windEastMps[index] =
-            tradeWeight * TRADE_WIND_EAST_MPS
-            + westerlyWeight * WESTERLY_WIND_EAST_MPS
-            + polarWeight * POLAR_EASTERLY_WIND_EAST_MPS;
+            tradeWeight * CONFIG.wind.tradeWindEastMps
+            + westerlyWeight * CONFIG.wind.westerlyWindEastMps
+            + polarWeight * CONFIG.wind.polarEasterlyWindEastMps;
 
         climateState.windNorthMps[index] = hemisphereSign * (
-            -tradeWeight * TRADE_WIND_MERIDIONAL_MPS
-            + westerlyWeight * WESTERLY_WIND_MERIDIONAL_MPS
-            - polarWeight * POLAR_EASTERLY_WIND_MERIDIONAL_MPS);
+            -tradeWeight * CONFIG.wind.tradeWindMeridionalMps
+            + westerlyWeight * CONFIG.wind.westerlyWindMeridionalMps
+            - polarWeight * CONFIG.wind.polarEasterlyWindMeridionalMps);
     }
 }
 
@@ -179,7 +159,7 @@ void applyOrographicDrag(ClimateState& climateState) {
             const f32 windEast = climateState.windEastMps[index];
             const f32 windNorth = climateState.windNorthMps[index];
             const f32 windSpeed = std::sqrt(windEast * windEast + windNorth * windNorth);
-            if (windSpeed < MIN_WIND_SPEED_MPS) {
+            if (windSpeed < CONFIG.shared.minWindSpeedMps) {
                 continue;
             }
 
@@ -194,7 +174,10 @@ void applyOrographicDrag(ClimateState& climateState) {
             const f32 upslope = std::max(
                 0.0f,
                 gradientEast * directionEast + gradientNorth * directionNorth);
-            const f32 drag = std::clamp(upslope * OROGRAPHIC_DRAG_FACTOR, 0.0f, MAX_OROGRAPHIC_DRAG);
+            const f32 drag = std::clamp(
+                upslope * CONFIG.wind.orographicDragFactor,
+                0.0f,
+                CONFIG.wind.maxOrographicDrag);
             const f32 retainedWindFactor = 1.0f - drag;
 
             climateState.windEastMps[index] = windEast * retainedWindFactor;
@@ -214,14 +197,14 @@ void applyOrographicDeflection(ClimateState& climateState) {
             const f32 windEast = climateState.windEastMps[index];
             const f32 windNorth = climateState.windNorthMps[index];
             const f32 windSpeed = vectorLength(windEast, windNorth);
-            if (windSpeed < MIN_WIND_SPEED_MPS) {
+            if (windSpeed < CONFIG.shared.minWindSpeedMps) {
                 continue;
             }
 
             const f32 gradientEast = computeAltitudeGradientX(climateState, column, row);
             const f32 gradientNorth = -computeAltitudeGradientZ(climateState, column, row);
             const f32 gradientMagnitude = vectorLength(gradientEast, gradientNorth);
-            if (gradientMagnitude < MIN_GRADIENT_MAGNITUDE) {
+            if (gradientMagnitude < CONFIG.wind.minGradientMagnitude) {
                 continue;
             }
 
@@ -243,13 +226,13 @@ void applyOrographicDeflection(ClimateState& climateState) {
             }
 
             const f32 deflection = std::clamp(
-                upslope * OROGRAPHIC_DEFLECTION_FACTOR,
+                upslope * CONFIG.wind.orographicDeflectionFactor,
                 0.0f,
-                MAX_OROGRAPHIC_DEFLECTION);
+                CONFIG.wind.maxOrographicDeflection);
             const f32 blendedEast = directionEast * (1.0f - deflection) + tangentEast * deflection;
             const f32 blendedNorth = directionNorth * (1.0f - deflection) + tangentNorth * deflection;
             const f32 blendedMagnitude = vectorLength(blendedEast, blendedNorth);
-            if (blendedMagnitude < MIN_WIND_SPEED_MPS) {
+            if (blendedMagnitude < CONFIG.shared.minWindSpeedMps) {
                 continue;
             }
 

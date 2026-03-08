@@ -8,21 +8,12 @@
 #include <cmath>
 
 #include "Astrophysics.h"
+#include "ClimateConfig.h"
 #include "game/map/elevations-creation/PlatecWrapper.h"
 
 namespace {
 
-constexpr f32 KELVIN_OFFSET = 273.15f;
-constexpr f32 MIN_OVERLAY_TEMPERATURE_C = -40.0f;
-constexpr f32 MAX_OVERLAY_TEMPERATURE_C = 40.0f;
-constexpr f32 MIN_OVERLAY_TEMPERATURE_K = KELVIN_OFFSET + MIN_OVERLAY_TEMPERATURE_C;
-constexpr f32 MAX_OVERLAY_TEMPERATURE_K = KELVIN_OFFSET + MAX_OVERLAY_TEMPERATURE_C;
-constexpr f32 POLAR_SEA_LEVEL_TEMPERATURE_K = KELVIN_OFFSET - 22.0f;
-constexpr f32 EQUATOR_SEA_LEVEL_TEMPERATURE_K = KELVIN_OFFSET + 32.0f;
-constexpr f32 MAX_ALTITUDE_COOLING_K = 38.0f;
-constexpr f32 TURN_RELAXATION_FACTOR = 0.35f;
-constexpr f32 MIN_HEIGHT_RANGE = 1e-6f;
-constexpr u32 LATITUDE_SAMPLE_COUNT = 19;  // every 10° from -90 to +90
+constexpr ClimateSettings::ClimateConfig CONFIG = ClimateSettings::DEFAULT_CLIMATE_CONFIG;
 
 u32 lookupIndex(const ClimateState& climateState, const u32 turnIndex, const u32 row) {
     return turnIndex * climateState.gridHeight + row;
@@ -46,7 +37,7 @@ ClimateState TemperaturePass::createInitialState(const MapResult& mapResult) {
         maxHeight = std::max(maxHeight, mapResult.heights[index]);
     }
 
-    const f32 heightRange = std::max(maxHeight - mapResult.oceanLevel, MIN_HEIGHT_RANGE);
+    const f32 heightRange = std::max(maxHeight - mapResult.oceanLevel, CONFIG.shared.minHeightRange);
 
     for (u32 row = 0; row < height; ++row) {
         const f32 latitudeRadians = static_cast<f32>(getLatitudeRadians(row, height));
@@ -82,7 +73,7 @@ void TemperaturePass::advanceOneTurn(ClimateState& climateState) {
     }
 
     const u32 nextTurn = (climateState.currentTurnIndex + 1) % Astro::DEFAULT_YEAR_TURN_COUNT;
-    blendTowardTurnTarget(climateState, nextTurn, TURN_RELAXATION_FACTOR);
+    blendTowardTurnTarget(climateState, nextTurn, CONFIG.temperature.turnRelaxationFactor);
     ++climateState.absoluteTurnIndex;
     climateState.currentTurnIndex = nextTurn;
     climateState.currentYearFraction =
@@ -95,7 +86,7 @@ void TemperaturePass::publishToTiles(const ClimateState& climateState, std::uniq
     }
 
     for (u32 index = 0; index < climateState.tileCount; ++index) {
-        const f32 temperatureCelsius = climateState.temperatureKelvin[index] - KELVIN_OFFSET;
+        const f32 temperatureCelsius = climateState.temperatureKelvin[index] - CONFIG.shared.kelvinOffset;
         tiles[index].temperature = quantizeTemperature(temperatureCelsius);
     }
 }
@@ -108,6 +99,10 @@ void TemperaturePass::precomputeSeaLevelTemperatureLookup(ClimateState& climateS
 
     const Astro::StarParams starParams;
     const Astro::OrbitalParams orbitalParams;
+    const f32 polarSeaLevelTemperatureK =
+        CONFIG.shared.kelvinOffset + CONFIG.temperature.polarSeaLevelTemperatureC;
+    const f32 equatorSeaLevelTemperatureK =
+        CONFIG.shared.kelvinOffset + CONFIG.temperature.equatorSeaLevelTemperatureC;
 
     for (u32 turnIndex = 0; turnIndex < climateState.seaLevelTemperatureTurnCount; ++turnIndex) {
         const u32 turnStart = turnIndex;
@@ -115,15 +110,18 @@ void TemperaturePass::precomputeSeaLevelTemperatureLookup(ClimateState& climateS
 
         f64 minInsolation = 1e18;
         f64 maxInsolation = -1e18;
-        for (u32 sampleIndex = 0; sampleIndex < LATITUDE_SAMPLE_COUNT; ++sampleIndex) {
-            const f64 sampleLatitude = -Astro::HALF_PI + sampleIndex * (Astro::PI / (LATITUDE_SAMPLE_COUNT - 1));
+        for (u32 sampleIndex = 0; sampleIndex < CONFIG.temperature.latitudeSampleCount; ++sampleIndex) {
+            const f64 sampleLatitude = -Astro::HALF_PI + sampleIndex * (
+                Astro::PI / (CONFIG.temperature.latitudeSampleCount - 1));
             const f64 sampleInsolation = Astro::Astrophysics::calculateAverageInsolationForTurnRange(
                 sampleLatitude, turnStart, turnEnd, starParams, orbitalParams);
             minInsolation = std::min(minInsolation, sampleInsolation);
             maxInsolation = std::max(maxInsolation, sampleInsolation);
         }
 
-        const f64 insolationRange = std::max(maxInsolation - minInsolation, static_cast<f64>(MIN_HEIGHT_RANGE));
+        const f64 insolationRange = std::max(
+            maxInsolation - minInsolation,
+            static_cast<f64>(CONFIG.shared.minHeightRange));
         for (u32 row = 0; row < climateState.gridHeight; ++row) {
             const f64 latitudeRadians = getLatitudeRadians(row, climateState.gridHeight);
             const f64 intervalInsolation = Astro::Astrophysics::calculateAverageInsolationForTurnRange(
@@ -138,8 +136,8 @@ void TemperaturePass::precomputeSeaLevelTemperatureLookup(ClimateState& climateS
                 1.0));
 
             climateState.seaLevelTemperatureByTurnRow[lookupIndex(climateState, turnIndex, row)] =
-                POLAR_SEA_LEVEL_TEMPERATURE_K
-                + normalizedInsolation * (EQUATOR_SEA_LEVEL_TEMPERATURE_K - POLAR_SEA_LEVEL_TEMPERATURE_K);
+                polarSeaLevelTemperatureK
+                + normalizedInsolation * (equatorSeaLevelTemperatureK - polarSeaLevelTemperatureK);
         }
     }
 }
@@ -159,7 +157,8 @@ void TemperaturePass::blendTowardTurnTarget(ClimateState& climateState, const u3
         const u32 rowStart = row * climateState.gridWidth;
         for (u32 column = 0; column < climateState.gridWidth; ++column) {
             const u32 index = rowStart + column;
-            const f32 altitudeCoolingK = climateState.relativeAltitude[index] * MAX_ALTITUDE_COOLING_K;
+            const f32 altitudeCoolingK =
+                climateState.relativeAltitude[index] * CONFIG.temperature.maxAltitudeCoolingK;
             const f32 targetTemperatureK = seaLevelTargetK - altitudeCoolingK;
 
             climateState.temperatureKelvin[index] +=
@@ -169,13 +168,21 @@ void TemperaturePass::blendTowardTurnTarget(ClimateState& climateState, const u3
 }
 
 f32 TemperaturePass::normalizeForOverlay(const i8 temperatureCelsius) {
-    const f32 clamped = std::clamp(static_cast<f32>(temperatureCelsius), MIN_OVERLAY_TEMPERATURE_C, MAX_OVERLAY_TEMPERATURE_C);
-    return (clamped - MIN_OVERLAY_TEMPERATURE_C) / (MAX_OVERLAY_TEMPERATURE_C - MIN_OVERLAY_TEMPERATURE_C);
+    const f32 clamped = std::clamp(
+        static_cast<f32>(temperatureCelsius),
+        CONFIG.temperature.minOverlayTemperatureC,
+        CONFIG.temperature.maxOverlayTemperatureC);
+    return (clamped - CONFIG.temperature.minOverlayTemperatureC)
+        / (CONFIG.temperature.maxOverlayTemperatureC - CONFIG.temperature.minOverlayTemperatureC);
 }
 
 f32 TemperaturePass::normalizeKelvinForOverlay(const f32 temperatureKelvin) {
-    const f32 clamped = std::clamp(temperatureKelvin, MIN_OVERLAY_TEMPERATURE_K, MAX_OVERLAY_TEMPERATURE_K);
-    return (clamped - MIN_OVERLAY_TEMPERATURE_K) / (MAX_OVERLAY_TEMPERATURE_K - MIN_OVERLAY_TEMPERATURE_K);
+    const f32 minOverlayTemperatureK =
+        CONFIG.shared.kelvinOffset + CONFIG.temperature.minOverlayTemperatureC;
+    const f32 maxOverlayTemperatureK =
+        CONFIG.shared.kelvinOffset + CONFIG.temperature.maxOverlayTemperatureC;
+    const f32 clamped = std::clamp(temperatureKelvin, minOverlayTemperatureK, maxOverlayTemperatureK);
+    return (clamped - minOverlayTemperatureK) / (maxOverlayTemperatureK - minOverlayTemperatureK);
 }
 
 f64 TemperaturePass::getLatitudeRadians(const u32 row, const u32 height) {
