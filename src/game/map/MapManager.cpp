@@ -361,9 +361,9 @@ void MapManager::updateTemperatureSnapshot(const ClimateState& climateState) {
     }
 }
 
-bool MapManager::updateBiomeSnapshot(const ClimateState& climateState) {
-    if (!tiles || !BiomeClassifier::classifyFromClimate(climateState, tiles.get(), gridWidth, gridHeight)) {
-        return false;
+void MapManager::updateSurfaceSnapshot() {
+    if (!tiles) {
+        return;
     }
 
     for (auto& [chunkPos, chunk] : loadedChunks) {
@@ -371,6 +371,14 @@ bool MapManager::updateBiomeSnapshot(const ClimateState& climateState) {
             refreshMeshBiomeData(meshData, tiles.get(), currentViewMode, currentOverlayFunc);
         }
     }
+}
+
+bool MapManager::updateBiomeSnapshot(const ClimateState& climateState) {
+    if (!tiles || !BiomeClassifier::classifyFromClimate(climateState, tiles.get(), gridWidth, gridHeight)) {
+        return false;
+    }
+
+    updateSurfaceSnapshot();
 
     return true;
 }

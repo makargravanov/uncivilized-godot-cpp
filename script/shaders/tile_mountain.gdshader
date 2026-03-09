@@ -7,15 +7,21 @@ shader_type spatial;
 uniform int view_mode : hint_range(0, 6) = 0;
 
 varying flat float biome_id;
+varying flat float features;
 varying flat float overlay_value;
 varying vec3 world_pos;
 varying vec3 world_normal;
 
 void vertex() {
 	biome_id      = INSTANCE_CUSTOM.x;
+	features      = INSTANCE_CUSTOM.z;
 	overlay_value = INSTANCE_CUSTOM.w;
 	world_pos     = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal  = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+}
+
+bool has_ice_cover(float feature_flags) {
+	return mod(floor(feature_flags / 16.0), 2.0) >= 0.5;
 }
 
 // ── Noise utilities ──────────────────────────────────────────────
@@ -179,6 +185,12 @@ void fragment() {
 				smoothstep(0.55, 0.85, slope) * get_mountain_vegetation_strength(biome);
 			color = mix(rock, vegetation, vegetation_factor);
 			roughness = mix(0.9, 0.84, vegetation_factor);
+		}
+
+		if (has_ice_cover(features)) {
+			float snow_overlay = smoothstep(0.35, 0.85, slope) * 0.72;
+			color = mix(color, SNOW_COLOR, snow_overlay);
+			roughness = mix(roughness, 0.68, snow_overlay);
 		}
 
 		ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));

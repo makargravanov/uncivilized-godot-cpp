@@ -76,6 +76,11 @@ public:
     std::unique_ptr<f32[]> annualPrecipitationAccumulator;
     std::unique_ptr<f32[]> humidityScratchKgPerKg;
     std::unique_ptr<f32[]> forestCoverFraction;
+    std::unique_ptr<f32[]> baseSurfaceAlbedo;
+    std::unique_ptr<f32[]> baseHeatCapacity;
+    std::unique_ptr<f32[]> snowWaterEquivalent;
+    std::unique_ptr<f32[]> snowCoverFraction;
+    std::unique_ptr<f32[]> seaIceFraction;
     std::unique_ptr<f32[]> surfaceAlbedo;
     std::unique_ptr<f32[]> effectiveHeatCapacity;
     std::unique_ptr<f32[]> currentYearTemperatureSumKelvin;
@@ -118,6 +123,11 @@ public:
           annualPrecipitationAccumulator(std::make_unique<f32[]>(tileCount)),
           humidityScratchKgPerKg(std::make_unique<f32[]>(tileCount)),
           forestCoverFraction(std::make_unique<f32[]>(tileCount)),
+          baseSurfaceAlbedo(std::make_unique<f32[]>(tileCount)),
+          baseHeatCapacity(std::make_unique<f32[]>(tileCount)),
+          snowWaterEquivalent(std::make_unique<f32[]>(tileCount)),
+          snowCoverFraction(std::make_unique<f32[]>(tileCount)),
+          seaIceFraction(std::make_unique<f32[]>(tileCount)),
           surfaceAlbedo(std::make_unique<f32[]>(tileCount)),
           effectiveHeatCapacity(std::make_unique<f32[]>(tileCount)),
           currentYearTemperatureSumKelvin(std::make_unique<f32[]>(tileCount)),
@@ -160,6 +170,11 @@ public:
           annualPrecipitationAccumulator(copyBuffer(other.annualPrecipitationAccumulator, other.tileCount)),
           humidityScratchKgPerKg(allocateBuffer<f32>(other.tileCount)),
           forestCoverFraction(copyBuffer(other.forestCoverFraction, other.tileCount)),
+          baseSurfaceAlbedo(copyBuffer(other.baseSurfaceAlbedo, other.tileCount)),
+          baseHeatCapacity(copyBuffer(other.baseHeatCapacity, other.tileCount)),
+          snowWaterEquivalent(copyBuffer(other.snowWaterEquivalent, other.tileCount)),
+          snowCoverFraction(copyBuffer(other.snowCoverFraction, other.tileCount)),
+          seaIceFraction(copyBuffer(other.seaIceFraction, other.tileCount)),
           surfaceAlbedo(copyBuffer(other.surfaceAlbedo, other.tileCount)),
           effectiveHeatCapacity(copyBuffer(other.effectiveHeatCapacity, other.tileCount)),
           currentYearTemperatureSumKelvin(copyBuffer(other.currentYearTemperatureSumKelvin, other.tileCount)),
@@ -218,6 +233,11 @@ public:
         annualPrecipitationAccumulator = copyBuffer(other.annualPrecipitationAccumulator, other.tileCount);
         humidityScratchKgPerKg = allocateBuffer<f32>(other.tileCount);
         forestCoverFraction = copyBuffer(other.forestCoverFraction, other.tileCount);
+        baseSurfaceAlbedo = copyBuffer(other.baseSurfaceAlbedo, other.tileCount);
+        baseHeatCapacity = copyBuffer(other.baseHeatCapacity, other.tileCount);
+        snowWaterEquivalent = copyBuffer(other.snowWaterEquivalent, other.tileCount);
+        snowCoverFraction = copyBuffer(other.snowCoverFraction, other.tileCount);
+        seaIceFraction = copyBuffer(other.seaIceFraction, other.tileCount);
         surfaceAlbedo = copyBuffer(other.surfaceAlbedo, other.tileCount);
         effectiveHeatCapacity = copyBuffer(other.effectiveHeatCapacity, other.tileCount);
         currentYearTemperatureSumKelvin = copyBuffer(other.currentYearTemperatureSumKelvin, other.tileCount);

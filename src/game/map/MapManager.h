@@ -125,10 +125,12 @@ public:
     // Overlay system: switch view mode and rewrite .w on all loaded chunks.
     void setViewMode(ViewMode mode, const OverlayFunc& overlayFunc);
     void updateTemperatureSnapshot(const ClimateState& climateState);
+    void updateSurfaceSnapshot();
     bool updateBiomeSnapshot(const ClimateState& climateState);
 
     const TileData& getTile(i32 index) const { return tiles[index]; }
     const TileData* getTiles() const { return tiles.get(); }
+    TileData* getTiles() { return tiles.get(); }
 
 private:
     std::unordered_map<godot::Vector2i, Chunk> loadedChunks;

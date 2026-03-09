@@ -40,6 +40,7 @@ public:
         TemperaturePass::initializeCurrentTurn(*climateState);
         WindPass::initialize(*climateState);
         MoisturePass::initialize(*climateState);
+        SurfacePropertiesPass::publishToTiles(*climateState, tiles.get());
         ClimateMetricsPass::initialize(*climateState);
         TemperaturePass::publishToTiles(*climateState, tiles);
         MoisturePass::publishToTiles(*climateState, tiles);
@@ -63,8 +64,10 @@ public:
         }
 
         advanceClimateStateOneTurn(*climateState);
-        mapManager->updateTemperatureSnapshot(*climateState);
         updateBiomeSnapshotIfNeeded();
+        SurfacePropertiesPass::publishToTiles(*climateState, mapManager->getTiles());
+        mapManager->updateTemperatureSnapshot(*climateState);
+        mapManager->updateSurfaceSnapshot();
     }
 
     static bool requestClimateTurnAsync() {
@@ -102,8 +105,10 @@ public:
         }
 
         if (mapManager) {
-            mapManager->updateTemperatureSnapshot(*climateState);
             updateBiomeSnapshotIfNeeded();
+            SurfacePropertiesPass::publishToTiles(*climateState, mapManager->getTiles());
+            mapManager->updateTemperatureSnapshot(*climateState);
+            mapManager->updateSurfaceSnapshot();
         }
 
         return true;
@@ -140,6 +145,7 @@ private:
         TemperaturePass::advanceOneTurn(state);
         WindPass::advanceOneTurn(state);
         MoisturePass::advanceOneTurn(state);
+        SurfacePropertiesPass::advanceOneTurn(state);
         ClimateMetricsPass::advanceOneTurn(state);
     }
 

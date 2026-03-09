@@ -107,6 +107,17 @@ void applyOceanEvaporation(ClimateState& climateState) {
     for (u32 i = 0; i < climateState.tileCount; ++i) {
         if (!isOceanTile(climateState, i)) continue;
 
+        const f32 seaIceFraction = climateState.seaIceFraction
+            ? std::clamp(climateState.seaIceFraction[i], 0.0f, 1.0f)
+            : 0.0f;
+        const f32 openWaterFraction = std::clamp(
+            1.0f - seaIceFraction * CONFIG.surface.seaIceEvaporationFactor,
+            0.0f,
+            1.0f);
+        if (openWaterFraction <= 0.0f) {
+            continue;
+        }
+
         const f32 temperatureCelsius = climateState.temperatureKelvin[i] - CONFIG.shared.kelvinOffset;
         const f32 maxHumidity = calculateMaxSpecificHumidity(temperatureCelsius);
         const f32 currentHumidity = climateState.humidityKgPerKg[i];
@@ -114,7 +125,8 @@ void applyOceanEvaporation(ClimateState& climateState) {
 
         climateState.humidityKgPerKg[i] += humidityDeficit
             * CONFIG.moisture.oceanEvaporationRate
-            * CONFIG.moisture.oceanEvaporationWindFactor;
+            * CONFIG.moisture.oceanEvaporationWindFactor
+            * openWaterFraction;
         climateState.humidityKgPerKg[i] = std::min(climateState.humidityKgPerKg[i], maxHumidity);
     }
 }

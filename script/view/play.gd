@@ -113,6 +113,12 @@ func _showTileInfo(info: Dictionary):
 		lines.append("Альбедо: %.3f" % info.get("surface_albedo", 0.0))
 	if info.has("effective_heat_capacity"):
 		lines.append("Теплоёмкость поверхности: %.2f" % info.get("effective_heat_capacity", 0.0))
+	if info.has("snow_cover_fraction"):
+		lines.append("Снежный покров: %.0f%%" % (info.get("snow_cover_fraction", 0.0) * 100.0))
+	if info.has("snow_water_equivalent"):
+		lines.append("Запас снега: %.4f" % info.get("snow_water_equivalent", 0.0))
+	if info.has("sea_ice_fraction"):
+		lines.append("Морской лёд: %.0f%%" % (info.get("sea_ice_fraction", 0.0) * 100.0))
 	if info.has("precipitation_annual"):
 		lines.append("Осадки (год, текущие): %.4f" % info.get("precipitation_annual", 0.0))
 	var completed_years: int = int(info.get("climate_years_completed", 0))

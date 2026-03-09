@@ -12,6 +12,10 @@ varying flat float features;
 varying flat float overlay_value;
 varying vec3 world_pos;
 
+bool has_ice_cover(float feature_flags) {
+	return mod(floor(feature_flags / 16.0), 2.0) >= 0.5;
+}
+
 void vertex() {
 	biome_id      = INSTANCE_CUSTOM.x;
 	river_edges   = INSTANCE_CUSTOM.y;
@@ -183,8 +187,17 @@ void fragment() {
 		color += (med_noise - 0.5) * 0.06;   // subtle medium detail
 		color += (fine_noise - 0.5) * 0.03;   // fine grain
 
+		if (has_ice_cover(features)) {
+			vec3 snow_color = vec3(0.92, 0.95, 0.98);
+			float snow_mix = 0.58 + large_noise * 0.12;
+			color = mix(color, snow_color, clamp(snow_mix, 0.0, 0.82));
+		}
+
 		// Slight roughness variation from noise.
 		float roughness = 0.85 + (med_noise - 0.5) * 0.1;
+		if (has_ice_cover(features)) {
+			roughness = mix(roughness, 0.72, 0.6);
+		}
 
 		ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));
 		ROUGHNESS = roughness;

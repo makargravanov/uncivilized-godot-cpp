@@ -51,6 +51,20 @@ struct ClimateSurfaceConfig {
     f32 clearedLandAlbedoBoost;
     f32 iceAlbedo;
     f32 iceHeatCapacityBonus;
+    f32 snowFullCoverWaterEquivalent;
+    f32 snowfallTemperatureC;
+    f32 snowfallTransitionRangeC;
+    f32 snowMeltTemperatureC;
+    f32 snowMeltRate;
+    f32 rainOnSnowMeltFactor;
+    f32 canopySnowMaskStrength;
+    f32 seaIceFreezeTemperatureC;
+    f32 seaIceMeltTemperatureC;
+    f32 seaIceGrowthRate;
+    f32 seaIceMeltRate;
+    f32 seaIceHeatCapacityFactor;
+    f32 seaIceEvaporationFactor;
+    f32 iceFeatureCoverageThreshold;
     f32 minTurnResponseFactor;
     f32 maxTurnResponseFactor;
 };
@@ -145,7 +159,21 @@ inline constexpr ClimateSurfaceConfig DEFAULT_SURFACE_CONFIG = {
     0.22f,
     0.03f,
     0.55f,
-    0.18f,
+    0.10f,
+    0.018f,
+    0.5f,
+    2.5f,
+    0.5f,
+    0.0035f,
+    0.85f,
+    0.65f,
+    -1.8f,
+    0.8f,
+    0.08f,
+    0.11f,
+    0.45f,
+    0.95f,
+    0.15f,
     0.05f,
     0.65f,
 };

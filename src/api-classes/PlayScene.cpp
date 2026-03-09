@@ -222,6 +222,12 @@ godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float wo
             result["surface_albedo"] = cs->surfaceAlbedo[tileIndex];
         if (cs->effectiveHeatCapacity)
             result["effective_heat_capacity"] = cs->effectiveHeatCapacity[tileIndex];
+        if (cs->snowWaterEquivalent)
+            result["snow_water_equivalent"] = cs->snowWaterEquivalent[tileIndex];
+        if (cs->snowCoverFraction)
+            result["snow_cover_fraction"] = cs->snowCoverFraction[tileIndex];
+        if (cs->seaIceFraction)
+            result["sea_ice_fraction"] = cs->seaIceFraction[tileIndex];
         result["climate_years_completed"] = static_cast<int>(cs->completedClimateYears);
         if (cs->completedClimateYears > 0) {
             if (cs->completedAnnualPrecipitation)

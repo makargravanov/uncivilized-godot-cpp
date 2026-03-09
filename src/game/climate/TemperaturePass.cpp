@@ -53,6 +53,13 @@ ClimateState TemperaturePass::createInitialState(const MapResult& mapResult) {
             }
             climateState.relativeAltitude[index] = relativeAltitude;
             climateState.forestCoverFraction[index] = 0.0f;
+            climateState.baseSurfaceAlbedo[index] =
+                isWater ? CONFIG.surface.deepWaterAlbedo : CONFIG.surface.landReferenceAlbedo;
+            climateState.baseHeatCapacity[index] =
+                isWater ? CONFIG.surface.deepWaterHeatCapacity : CONFIG.surface.landHeatCapacity;
+            climateState.snowWaterEquivalent[index] = 0.0f;
+            climateState.snowCoverFraction[index] = 0.0f;
+            climateState.seaIceFraction[index] = 0.0f;
             climateState.surfaceAlbedo[index] =
                 isWater ? CONFIG.surface.deepWaterAlbedo : CONFIG.surface.landReferenceAlbedo;
             climateState.effectiveHeatCapacity[index] =

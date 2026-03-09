@@ -17,7 +17,7 @@ namespace Feature {
     constexpr FeatureFlags FOREST_CLEARED = 1 << 1;  // forest was cut — potential for regrowth
     constexpr FeatureFlags HAS_SWAMP      = 1 << 2;
     constexpr FeatureFlags FLOOD_PLAIN    = 1 << 3;  // river floodplain
-    constexpr FeatureFlags HAS_ICE        = 1 << 4;  // ice cover (climate-driven)
+    constexpr FeatureFlags HAS_ICE        = 1 << 4;  // snow or surface ice cover (climate-driven)
     // 3 bits free
 }
 

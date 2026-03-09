@@ -10,13 +10,19 @@ shader_type spatial;
 uniform int view_mode : hint_range(0, 6) = 0;
 
 varying flat float biome_id;
+varying flat float features;
 varying flat float overlay_value;
 varying vec3 world_pos;
 
 void vertex() {
 	biome_id      = INSTANCE_CUSTOM.x;
+	features      = INSTANCE_CUSTOM.z;
 	overlay_value = INSTANCE_CUSTOM.w;
 	world_pos     = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+
+bool has_ice_cover(float feature_flags) {
+	return mod(floor(feature_flags / 16.0), 2.0) >= 0.5;
 }
 
 // ── Hash / noise (same as land shader, duplicated to keep shaders self-contained) ──
@@ -197,9 +203,19 @@ void fragment() {
 		float shimmer = value_noise(uv * 5.0 + vec2(TIME * 0.12, TIME * 0.08));
 		color += vec3(0.02, 0.03, 0.04) * smoothstep(0.55, 0.85, shimmer);
 
-		ALBEDO    = color;
-		METALLIC  = 0.2;
-		ROUGHNESS = 0.15 + (1.0 - fresnel) * 0.2;  // smoother at glancing angles
-		SPECULAR  = specular_val;
+		if (has_ice_cover(features)) {
+			vec3 ice_color = vec3(0.83, 0.90, 0.96);
+			float ice_noise = value_noise(uv * 1.8 + vec2(TIME * 0.01, -TIME * 0.008));
+			color = mix(ice_color * 0.92, ice_color, smoothstep(0.25, 0.75, ice_noise));
+			METALLIC  = 0.02;
+			ROUGHNESS = 0.72;
+			SPECULAR  = 0.18;
+			ALBEDO    = color;
+		} else {
+			ALBEDO    = color;
+			METALLIC  = 0.2;
+			ROUGHNESS = 0.15 + (1.0 - fresnel) * 0.2;  // smoother at glancing angles
+			SPECULAR  = specular_val;
+		}
 	}
 }
