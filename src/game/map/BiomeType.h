@@ -33,7 +33,7 @@ inline bool isWaterBiome(BiomeType b) {
     return b <= BIOME_SHALLOW_INLAND_SEA;
 }
 
-inline bool isForestBiome(BiomeType b) {
+inline bool isForestCapableBiome(BiomeType b) {
     return b == BIOME_BOREAL_FOREST
         || b == BIOME_TEMPERATE_FOREST
     || b == BIOME_TROPICAL_SEASONAL_FOREST

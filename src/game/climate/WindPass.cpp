@@ -43,7 +43,7 @@ f32 getHemisphereSign(const f32 latitudeRadians) {
 }
 
 f32 getSeasonalLatitudeShift(const f32 yearFraction) {
-    const Astro::OrbitalParams orbitalParams;
+    constexpr Astro::OrbitalParams orbitalParams;
     const auto orbitState = Astro::Astrophysics::calculateOrbitStateByYearFraction(
         orbitalParams, static_cast<f64>(yearFraction));
     return static_cast<f32>(orbitState.declination) * CONFIG.wind.itczDeclinationTrackingFraction;
@@ -102,14 +102,14 @@ void applyLatitudeCirculation(ClimateState& climateState) {
     }
 
     const f32 seasonalShift = getSeasonalLatitudeShift(climateState.currentYearFraction);
-    const f32 calmEquatorRadians = ClimateSettings::toRadians(CONFIG.wind.calmEquatorDegrees);
-    const f32 bandFadeRadians = ClimateSettings::toRadians(CONFIG.wind.bandFadeDegrees);
-    const f32 tradeBandStartRadians = ClimateSettings::toRadians(CONFIG.wind.tradeBandStartDegrees);
-    const f32 tradeBandEndRadians = ClimateSettings::toRadians(CONFIG.wind.tradeBandEndDegrees);
-    const f32 westerlyBandStartRadians = ClimateSettings::toRadians(CONFIG.wind.westerlyBandStartDegrees);
-    const f32 westerlyBandEndRadians = ClimateSettings::toRadians(CONFIG.wind.westerlyBandEndDegrees);
-    const f32 polarBandStartRadians = ClimateSettings::toRadians(CONFIG.wind.polarBandStartDegrees);
-    const f32 polarBandEndRadians = ClimateSettings::toRadians(CONFIG.wind.polarBandEndDegrees);
+    constexpr f32 calmEquatorRadians = ClimateSettings::toRadians(CONFIG.wind.calmEquatorDegrees);
+    constexpr f32 bandFadeRadians = ClimateSettings::toRadians(CONFIG.wind.bandFadeDegrees);
+    constexpr f32 tradeBandStartRadians = ClimateSettings::toRadians(CONFIG.wind.tradeBandStartDegrees);
+    constexpr f32 tradeBandEndRadians = ClimateSettings::toRadians(CONFIG.wind.tradeBandEndDegrees);
+    constexpr f32 westerlyBandStartRadians = ClimateSettings::toRadians(CONFIG.wind.westerlyBandStartDegrees);
+    constexpr f32 westerlyBandEndRadians = ClimateSettings::toRadians(CONFIG.wind.westerlyBandEndDegrees);
+    constexpr f32 polarBandStartRadians = ClimateSettings::toRadians(CONFIG.wind.polarBandStartDegrees);
+    constexpr f32 polarBandEndRadians = ClimateSettings::toRadians(CONFIG.wind.polarBandEndDegrees);
 
     for (u32 index = 0; index < climateState.tileCount; ++index) {
         const f32 shiftedLatitude = std::clamp(

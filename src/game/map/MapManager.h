@@ -128,6 +128,7 @@ public:
     bool updateBiomeSnapshot(const ClimateState& climateState);
 
     const TileData& getTile(i32 index) const { return tiles[index]; }
+    const TileData* getTiles() const { return tiles.get(); }
 
 private:
     std::unordered_map<godot::Vector2i, Chunk> loadedChunks;

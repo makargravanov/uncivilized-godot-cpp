@@ -16,6 +16,7 @@ struct MapResult;
 class TemperaturePass {
 public:
     static ClimateState createInitialState(const MapResult& mapResult);
+    static void initializeCurrentTurn(ClimateState& climateState);
     static void advanceOneTurn(ClimateState& climateState);
     static void publishToTiles(const ClimateState& climateState, std::unique_ptr<TileData[]>& tiles);
 

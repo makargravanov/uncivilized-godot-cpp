@@ -213,11 +213,26 @@ BiomeType classifyClimateLandBiome(const ReliefType relief, const ClimateBiomeIn
 }
 
 FeatureFlags updateBiomeFeatures(const FeatureFlags existingFeatures, const BiomeType biome) {
-    FeatureFlags updatedFeatures = existingFeatures & ~Feature::HAS_FOREST;
-    if (isForestBiome(biome)) {
-        updatedFeatures |= Feature::HAS_FOREST;
+    FeatureFlags updatedFeatures = existingFeatures;
+
+    if (!isForestCapableBiome(biome)) {
+        updatedFeatures &= ~(Feature::HAS_FOREST | Feature::FOREST_CLEARED);
+        return updatedFeatures;
     }
+
+    if (updatedFeatures & Feature::HAS_FOREST) {
+        updatedFeatures &= ~Feature::FOREST_CLEARED;
+    }
+
     return updatedFeatures;
+}
+
+TileData makeTile(const ReliefType relief, const BiomeType biome) {
+    TileData tile { relief, biome };
+    if (isForestCapableBiome(biome)) {
+        tile.features |= Feature::HAS_FOREST;
+    }
+    return tile;
 }
 
 } // namespace
@@ -237,22 +252,22 @@ std::unique_ptr<TileData[]> BiomeClassifier::classify(
             case SHALLOW_OCEAN:
             case VALLEY:
             case SHALLOW_VALLEY:
-                tiles[i] = { RELIEF_OCEAN, biome };
+                tiles[i] = makeTile(RELIEF_OCEAN, biome);
                 break;
             case PLAIN:
-                tiles[i] = { RELIEF_LAND, biome };
+                tiles[i] = makeTile(RELIEF_LAND, biome);
                 break;
             case HILL:
-                tiles[i] = { RELIEF_HILL, biome };
+                tiles[i] = makeTile(RELIEF_HILL, biome);
                 break;
             case MOUNTAIN:
-                tiles[i] = { RELIEF_MOUNTAIN, biome };
+                tiles[i] = makeTile(RELIEF_MOUNTAIN, biome);
                 break;
             case HIGH_MOUNTAIN:
-                tiles[i] = { RELIEF_HIGH_MOUNTAIN, biome };
+                tiles[i] = makeTile(RELIEF_HIGH_MOUNTAIN, biome);
                 break;
             default:
-                tiles[i] = { RELIEF_LAND, classifyInitialLandBiome(row, height) };
+                tiles[i] = makeTile(RELIEF_LAND, classifyInitialLandBiome(row, height));
                 break;
         }
     }

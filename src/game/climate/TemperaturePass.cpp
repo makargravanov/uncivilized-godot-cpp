@@ -46,11 +46,17 @@ ClimateState TemperaturePass::createInitialState(const MapResult& mapResult) {
             climateState.latitudeRadians[index] = latitudeRadians;
 
             const f32 rawHeight = mapResult.heights[index];
+            const bool isWater = rawHeight <= mapResult.oceanLevel;
             f32 relativeAltitude = 0.0f;
             if (rawHeight > mapResult.oceanLevel) {
                 relativeAltitude = std::clamp((rawHeight - mapResult.oceanLevel) / heightRange, 0.0f, 1.0f);
             }
             climateState.relativeAltitude[index] = relativeAltitude;
+            climateState.forestCoverFraction[index] = 0.0f;
+            climateState.surfaceAlbedo[index] =
+                isWater ? CONFIG.surface.deepWaterAlbedo : CONFIG.surface.landReferenceAlbedo;
+            climateState.effectiveHeatCapacity[index] =
+                isWater ? CONFIG.surface.deepWaterHeatCapacity : CONFIG.surface.landHeatCapacity;
         }
     }
 
@@ -62,9 +68,13 @@ ClimateState TemperaturePass::createInitialState(const MapResult& mapResult) {
     climateState.absoluteTurnIndex = 0;
     climateState.currentTurnIndex = 0;
     climateState.currentYearFraction = 0.0f;
-    blendTowardTurnTarget(climateState, 0, 1.0f);
+    initializeCurrentTurn(climateState);
 
     return climateState;
+}
+
+void TemperaturePass::initializeCurrentTurn(ClimateState& climateState) {
+    blendTowardTurnTarget(climateState, climateState.currentTurnIndex, 1.0f);
 }
 
 void TemperaturePass::advanceOneTurn(ClimateState& climateState) {
@@ -99,9 +109,8 @@ void TemperaturePass::precomputeSeaLevelTemperatureLookup(ClimateState& climateS
 
     const Astro::StarParams starParams;
     const Astro::OrbitalParams orbitalParams;
-    const f32 polarSeaLevelTemperatureK =
-        CONFIG.shared.kelvinOffset + CONFIG.temperature.polarSeaLevelTemperatureC;
-    const f32 equatorSeaLevelTemperatureK =
+    constexpr f32 polarSeaLevelTemperatureK = CONFIG.shared.kelvinOffset + CONFIG.temperature.polarSeaLevelTemperatureC;
+    constexpr f32 equatorSeaLevelTemperatureK =
         CONFIG.shared.kelvinOffset + CONFIG.temperature.equatorSeaLevelTemperatureC;
 
     for (u32 turnIndex = 0; turnIndex < climateState.seaLevelTemperatureTurnCount; ++turnIndex) {
@@ -159,10 +168,28 @@ void TemperaturePass::blendTowardTurnTarget(ClimateState& climateState, const u3
             const u32 index = rowStart + column;
             const f32 altitudeCoolingK =
                 climateState.relativeAltitude[index] * CONFIG.temperature.maxAltitudeCoolingK;
-            const f32 targetTemperatureK = seaLevelTargetK - altitudeCoolingK;
+            const f32 surfaceAlbedo = climateState.surfaceAlbedo
+                ? climateState.surfaceAlbedo[index]
+                : CONFIG.surface.referenceAlbedo;
+            const f32 albedoCoolingK =
+                (surfaceAlbedo - CONFIG.surface.referenceAlbedo) * CONFIG.surface.albedoTemperatureResponseK;
+            const f32 targetTemperatureK = seaLevelTargetK - altitudeCoolingK - albedoCoolingK;
+
+            if (blendFactor >= 1.0f) {
+                climateState.temperatureKelvin[index] = targetTemperatureK;
+                continue;
+            }
+
+            const f32 effectiveHeatCapacity = climateState.effectiveHeatCapacity
+                ? std::max(climateState.effectiveHeatCapacity[index], 1e-3f)
+                : CONFIG.surface.landHeatCapacity;
+            const f32 localBlendFactor = std::clamp(
+                blendFactor / effectiveHeatCapacity,
+                CONFIG.surface.minTurnResponseFactor,
+                CONFIG.surface.maxTurnResponseFactor);
 
             climateState.temperatureKelvin[index] +=
-                (targetTemperatureK - climateState.temperatureKelvin[index]) * blendFactor;
+                (targetTemperatureK - climateState.temperatureKelvin[index]) * localBlendFactor;
         }
     }
 }
@@ -177,9 +204,8 @@ f32 TemperaturePass::normalizeForOverlay(const i8 temperatureCelsius) {
 }
 
 f32 TemperaturePass::normalizeKelvinForOverlay(const f32 temperatureKelvin) {
-    const f32 minOverlayTemperatureK =
-        CONFIG.shared.kelvinOffset + CONFIG.temperature.minOverlayTemperatureC;
-    const f32 maxOverlayTemperatureK =
+    constexpr f32 minOverlayTemperatureK = CONFIG.shared.kelvinOffset + CONFIG.temperature.minOverlayTemperatureC;
+    constexpr f32 maxOverlayTemperatureK =
         CONFIG.shared.kelvinOffset + CONFIG.temperature.maxOverlayTemperatureC;
     const f32 clamped = std::clamp(temperatureKelvin, minOverlayTemperatureK, maxOverlayTemperatureK);
     return (clamped - minOverlayTemperatureK) / (maxOverlayTemperatureK - minOverlayTemperatureK);

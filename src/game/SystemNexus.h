@@ -13,6 +13,7 @@
 #include "climate/ClimateState.h"
 #include "climate/ClimateMetricsPass.h"
 #include "climate/MoisturePass.h"
+#include "climate/SurfacePropertiesPass.h"
 #include "climate/TemperaturePass.h"
 #include "climate/WindPass.h"
 #include "map/MapManager.h"
@@ -35,6 +36,8 @@ public:
 
         climateState = std::make_unique<ClimateState>(
             TemperaturePass::createInitialState(mapResult.mapResult));
+        SurfacePropertiesPass::initialize(*climateState, tiles.get());
+        TemperaturePass::initializeCurrentTurn(*climateState);
         WindPass::initialize(*climateState);
         MoisturePass::initialize(*climateState);
         ClimateMetricsPass::initialize(*climateState);
@@ -145,7 +148,9 @@ private:
             return;
         }
 
-        mapManager->updateBiomeSnapshot(*climateState);
+        if (mapManager->updateBiomeSnapshot(*climateState)) {
+            SurfacePropertiesPass::refreshFromTiles(*climateState, mapManager->getTiles());
+        }
         appliedClimateBiomeYears = climateState->completedClimateYears;
     }
 

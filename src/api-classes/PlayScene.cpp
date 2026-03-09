@@ -216,6 +216,12 @@ godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float wo
             result["precipitation_turn"] = cs->turnPrecipitation[tileIndex];
         if (cs->annualPrecipitationAccumulator)
             result["precipitation_annual"] = cs->annualPrecipitationAccumulator[tileIndex];
+        if (cs->forestCoverFraction)
+            result["forest_cover_fraction"] = cs->forestCoverFraction[tileIndex];
+        if (cs->surfaceAlbedo)
+            result["surface_albedo"] = cs->surfaceAlbedo[tileIndex];
+        if (cs->effectiveHeatCapacity)
+            result["effective_heat_capacity"] = cs->effectiveHeatCapacity[tileIndex];
         result["climate_years_completed"] = static_cast<int>(cs->completedClimateYears);
         if (cs->completedClimateYears > 0) {
             if (cs->completedAnnualPrecipitation)

@@ -175,7 +175,7 @@ void precomputeTransportMetadata(ClimateState& climateState) {
     }
 }
 
-void advectMoistureOneSubStep(ClimateState& climateState) {
+void advectMoistureOneSubStep(const ClimateState& climateState) {
     if (!climateState.humidityScratchKgPerKg || !climateState.humidityKgPerKg ||
         !climateState.moistureUpwindEastIndex || !climateState.moistureUpwindNorthIndex ||
         !climateState.moistureEastWeight || !climateState.moistureNorthWeight ||
@@ -297,14 +297,14 @@ void MoisturePass::publishToTiles(const ClimateState& climateState, const std::u
     }
 }
 
-f32 MoisturePass::normalizeForOverlay(f32 humidityKgPerKg) {
+f32 MoisturePass::normalizeForOverlay(const f32 humidityKgPerKg) {
     return std::clamp(
         (humidityKgPerKg - CONFIG.moisture.minOverlayHumidity)
             / (CONFIG.moisture.maxOverlayHumidity - CONFIG.moisture.minOverlayHumidity),
         0.0f, 1.0f);
 }
 
-f32 MoisturePass::normalizePrecipitationForOverlay(f32 turnPrecipitation) {
+f32 MoisturePass::normalizePrecipitationForOverlay(const f32 turnPrecipitation) {
     const f32 linear = std::clamp(
         (turnPrecipitation - CONFIG.moisture.minOverlayTurnPrecipitation)
             / (CONFIG.moisture.maxOverlayTurnPrecipitation

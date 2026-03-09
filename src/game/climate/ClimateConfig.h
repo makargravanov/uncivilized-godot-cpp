@@ -35,6 +35,26 @@ struct ClimateTemperatureConfig {
     u32 latitudeSampleCount;
 };
 
+struct ClimateSurfaceConfig {
+    f32 referenceAlbedo;
+    f32 albedoTemperatureResponseK;
+    f32 deepWaterAlbedo;
+    f32 shallowWaterAlbedo;
+    f32 landReferenceAlbedo;
+    f32 deepWaterHeatCapacity;
+    f32 shallowWaterHeatCapacity;
+    f32 landHeatCapacity;
+    f32 hillHeatCapacity;
+    f32 mountainHeatCapacity;
+    f32 forestCanopyAlbedo;
+    f32 forestHeatCapacityBonus;
+    f32 clearedLandAlbedoBoost;
+    f32 iceAlbedo;
+    f32 iceHeatCapacityBonus;
+    f32 minTurnResponseFactor;
+    f32 maxTurnResponseFactor;
+};
+
 struct ClimateWindConfig {
     f32 itczDeclinationTrackingFraction;
     f32 calmEquatorDegrees;
@@ -81,6 +101,7 @@ struct ClimateMoistureConfig {
 struct ClimateConfig {
     ClimateSharedConfig shared;
     ClimateTemperatureConfig temperature;
+    ClimateSurfaceConfig surface;
     ClimateWindConfig wind;
     ClimateMoistureConfig moisture;
 };
@@ -107,6 +128,26 @@ inline constexpr ClimateTemperatureConfig DEFAULT_TEMPERATURE_CONFIG = {
     38.0f,
     0.35f,
     19,
+};
+
+inline constexpr ClimateSurfaceConfig DEFAULT_SURFACE_CONFIG = {
+    0.22f,
+    10.0f,
+    0.08f,
+    0.12f,
+    0.22f,
+    3.2f,
+    2.6f,
+    1.0f,
+    0.88f,
+    0.72f,
+    0.12f,
+    0.22f,
+    0.03f,
+    0.55f,
+    0.18f,
+    0.05f,
+    0.65f,
 };
 
 inline constexpr ClimateWindConfig DEFAULT_WIND_CONFIG = {
@@ -155,6 +196,7 @@ inline constexpr ClimateMoistureConfig DEFAULT_MOISTURE_CONFIG = {
 inline constexpr ClimateConfig DEFAULT_CLIMATE_CONFIG = {
     DEFAULT_SHARED_CONFIG,
     DEFAULT_TEMPERATURE_CONFIG,
+    DEFAULT_SURFACE_CONFIG,
     DEFAULT_WIND_CONFIG,
     DEFAULT_MOISTURE_CONFIG,
 };

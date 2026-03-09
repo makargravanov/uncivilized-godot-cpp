@@ -107,6 +107,12 @@ func _showTileInfo(info: Dictionary):
 		lines.append("Влажность: %.4f kg/kg" % info.get("humidity", 0.0))
 	if info.has("precipitation_turn"):
 		lines.append("Осадки (ход): %.5f" % info.get("precipitation_turn", 0.0))
+	if info.has("forest_cover_fraction"):
+		lines.append("Лесной покров: %.0f%%" % (info.get("forest_cover_fraction", 0.0) * 100.0))
+	if info.has("surface_albedo"):
+		lines.append("Альбедо: %.3f" % info.get("surface_albedo", 0.0))
+	if info.has("effective_heat_capacity"):
+		lines.append("Теплоёмкость поверхности: %.2f" % info.get("effective_heat_capacity", 0.0))
 	if info.has("precipitation_annual"):
 		lines.append("Осадки (год, текущие): %.4f" % info.get("precipitation_annual", 0.0))
 	var completed_years: int = int(info.get("climate_years_completed", 0))
