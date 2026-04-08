@@ -247,7 +247,6 @@ void refreshStaticSurfaceInputs(ClimateState& climateState, const TileData* tile
 
 void SurfacePropertiesPass::initialize(ClimateState& climateState, const TileData* tiles) {
     refreshStaticSurfaceInputs(climateState, tiles);
-    initializeCryosphereFromTemperature(climateState);
     recomputeDynamicSurfaceProperties(climateState);
 }
 

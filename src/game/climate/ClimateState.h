@@ -69,6 +69,7 @@ public:
 
     // SoA buffers for the current climate state.
     std::unique_ptr<f32[]> temperatureKelvin;
+    std::unique_ptr<f32[]> temperatureScratchKelvin;
     std::unique_ptr<f32[]> windEastMps;
     std::unique_ptr<f32[]> windNorthMps;
     std::unique_ptr<f32[]> humidityKgPerKg;
@@ -106,8 +107,8 @@ public:
     // Minimal static inputs needed by the temperature model.
     std::unique_ptr<f32[]> latitudeRadians;
     std::unique_ptr<f32[]> relativeAltitude;
-    u32 seaLevelTemperatureTurnCount = 0;
-    std::unique_ptr<f32[]> seaLevelTemperatureByTurnRow;
+    u32 annualTurnCount = 0;
+    std::unique_ptr<f32[]> insolationByTurnRow;
 
     ClimateState() = default;
 
@@ -116,6 +117,7 @@ public:
           gridHeight(height),
           tileCount(width * height),
           temperatureKelvin(std::make_unique<f32[]>(tileCount)),
+                    temperatureScratchKelvin(std::make_unique<f32[]>(tileCount)),
                     windEastMps(std::make_unique<f32[]>(tileCount)),
                     windNorthMps(std::make_unique<f32[]>(tileCount)),
           humidityKgPerKg(std::make_unique<f32[]>(tileCount)),
@@ -163,6 +165,7 @@ public:
           currentQuarterTurnSamples(other.currentQuarterTurnSamples),
           completedClimateYears(other.completedClimateYears),
           temperatureKelvin(copyBuffer(other.temperatureKelvin, other.tileCount)),
+          temperatureScratchKelvin(copyBuffer(other.temperatureScratchKelvin, other.tileCount)),
           windEastMps(copyBuffer(other.windEastMps, other.tileCount)),
           windNorthMps(copyBuffer(other.windNorthMps, other.tileCount)),
           humidityKgPerKg(copyBuffer(other.humidityKgPerKg, other.tileCount)),
@@ -206,9 +209,9 @@ public:
           moistureOrographicCoolingK(allocateBuffer<f32>(other.tileCount)),
           latitudeRadians(copyBuffer(other.latitudeRadians, other.tileCount)),
           relativeAltitude(copyBuffer(other.relativeAltitude, other.tileCount)),
-          seaLevelTemperatureTurnCount(other.seaLevelTemperatureTurnCount),
-          seaLevelTemperatureByTurnRow(copyBuffer(other.seaLevelTemperatureByTurnRow,
-              other.seaLevelTemperatureTurnCount * other.gridHeight)) {}
+          annualTurnCount(other.annualTurnCount),
+          insolationByTurnRow(copyBuffer(other.insolationByTurnRow,
+              other.annualTurnCount * other.gridHeight)) {}
 
     ClimateState& operator=(const ClimateState& other) {
         if (this == &other) {
@@ -226,6 +229,7 @@ public:
         completedClimateYears = other.completedClimateYears;
 
         temperatureKelvin = copyBuffer(other.temperatureKelvin, other.tileCount);
+        temperatureScratchKelvin = copyBuffer(other.temperatureScratchKelvin, other.tileCount);
         windEastMps = copyBuffer(other.windEastMps, other.tileCount);
         windNorthMps = copyBuffer(other.windNorthMps, other.tileCount);
         humidityKgPerKg = copyBuffer(other.humidityKgPerKg, other.tileCount);
@@ -269,10 +273,10 @@ public:
         moistureOrographicCoolingK = allocateBuffer<f32>(other.tileCount);
         latitudeRadians = copyBuffer(other.latitudeRadians, other.tileCount);
         relativeAltitude = copyBuffer(other.relativeAltitude, other.tileCount);
-        seaLevelTemperatureTurnCount = other.seaLevelTemperatureTurnCount;
-        seaLevelTemperatureByTurnRow = copyBuffer(
-            other.seaLevelTemperatureByTurnRow,
-            other.seaLevelTemperatureTurnCount * other.gridHeight);
+        annualTurnCount = other.annualTurnCount;
+        insolationByTurnRow = copyBuffer(
+            other.insolationByTurnRow,
+            other.annualTurnCount * other.gridHeight);
 
         return *this;
     }

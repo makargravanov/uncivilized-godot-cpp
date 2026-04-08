@@ -28,11 +28,18 @@ struct ClimateSharedConfig {
 struct ClimateTemperatureConfig {
     f32 minOverlayTemperatureC;
     f32 maxOverlayTemperatureC;
-    f32 polarSeaLevelTemperatureC;
-    f32 equatorSeaLevelTemperatureC;
+    f32 atmosphericTransmissivity;
+    f32 outgoingLongwaveBaseWm2;
+    f32 outgoingLongwaveSlopeWm2PerC;
+    f32 referenceHeatCapacityJPerM2K;
+    f32 planetRadiusMeters;
+    f32 minimumZonalCellWidthFactor;
+    f32 landThermalDiffusivityM2PerS;
+    f32 coastalThermalDiffusivityM2PerS;
+    f32 oceanThermalDiffusivityM2PerS;
+    f32 windAdvectionCoupling;
+    f32 maxAdvectiveCourantNumber;
     f32 maxAltitudeCoolingK;
-    f32 turnRelaxationFactor;
-    u32 latitudeSampleCount;
 };
 
 struct ClimateSurfaceConfig {
@@ -137,11 +144,18 @@ inline constexpr ClimateSharedConfig DEFAULT_SHARED_CONFIG = {
 inline constexpr ClimateTemperatureConfig DEFAULT_TEMPERATURE_CONFIG = {
     -40.0f,
     40.0f,
-    -22.0f,
-    32.0f,
-    38.0f,
+    0.88f,
+    220.0f,
+    2.60f,
+    2.4e7f,
+    6.371e6f,
     0.35f,
-    19,
+    1.2e4f,
+    2.0e4f,
+    3.0e4f,
+    0.02f,
+    0.45f,
+    38.0f,
 };
 
 inline constexpr ClimateSurfaceConfig DEFAULT_SURFACE_CONFIG = {

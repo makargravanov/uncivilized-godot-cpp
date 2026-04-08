@@ -15,7 +15,7 @@ void clearBuffer(const std::unique_ptr<f32[]>& buffer, const u32 tileCount) {
 }
 
 u32 getQuarterIndex(const ClimateState& climateState) {
-    const u32 yearTurnCount = std::max(climateState.seaLevelTemperatureTurnCount, 1u);
+    const u32 yearTurnCount = std::max(climateState.annualTurnCount, 1u);
     const u32 quarterIndex =
         (climateState.currentTurnIndex * CLIMATE_QUARTER_COUNT) / yearTurnCount;
     return std::min(quarterIndex, CLIMATE_QUARTER_COUNT - 1);
