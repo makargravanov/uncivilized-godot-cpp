@@ -100,6 +100,17 @@ public:
     std::unique_ptr<f32[]> completedWarmestQuarterMeanTemperatureKelvin;
     std::unique_ptr<f32[]> completedDriestQuarterPrecipitation;
     std::unique_ptr<f32[]> completedWettestQuarterPrecipitation;
+    f32 currentYearGlobalMeanTemperatureKelvin = 0.0f;
+    f32 currentYearGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
+    f32 currentYearGlobalCryosphereCoolingDeltaKelvin = 0.0f;
+    f32 currentYearGlobalMeanSurfaceAlbedo = 0.0f;
+    f32 currentYearGlobalCryosphereFraction = 0.0f;
+    f32 completedGlobalMeanTemperatureKelvin = 0.0f;
+    f32 completedGlobalMeanTemperatureDeltaKelvin = 0.0f;
+    f32 completedGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
+    f32 completedGlobalCryosphereCoolingDeltaKelvin = 0.0f;
+    f32 completedGlobalMeanSurfaceAlbedo = 0.0f;
+    f32 completedGlobalCryosphereFraction = 0.0f;
     std::unique_ptr<u32[]> moistureUpwindEastIndex;
     std::unique_ptr<u32[]> moistureUpwindNorthIndex;
     std::unique_ptr<f32[]> moistureEastWeight;
@@ -205,15 +216,28 @@ public:
           completedAnnualMeanTemperatureKelvin(copyBuffer(other.completedAnnualMeanTemperatureKelvin, other.tileCount)),
           completedAnnualTemperatureMinKelvin(copyBuffer(other.completedAnnualTemperatureMinKelvin, other.tileCount)),
           completedAnnualTemperatureMaxKelvin(copyBuffer(other.completedAnnualTemperatureMaxKelvin, other.tileCount)),
-          completedColdestQuarterMeanTemperatureKelvin(copyBuffer(
-              other.completedColdestQuarterMeanTemperatureKelvin,
-              other.tileCount)),
-          completedWarmestQuarterMeanTemperatureKelvin(copyBuffer(
-              other.completedWarmestQuarterMeanTemperatureKelvin,
-              other.tileCount)),
-          completedDriestQuarterPrecipitation(copyBuffer(other.completedDriestQuarterPrecipitation, other.tileCount)),
-          completedWettestQuarterPrecipitation(copyBuffer(other.completedWettestQuarterPrecipitation, other.tileCount)),
-          moistureUpwindEastIndex(allocateBuffer<u32>(other.tileCount)),
+           completedColdestQuarterMeanTemperatureKelvin(copyBuffer(
+               other.completedColdestQuarterMeanTemperatureKelvin,
+               other.tileCount)),
+           completedWarmestQuarterMeanTemperatureKelvin(copyBuffer(
+               other.completedWarmestQuarterMeanTemperatureKelvin,
+               other.tileCount)),
+           completedDriestQuarterPrecipitation(copyBuffer(other.completedDriestQuarterPrecipitation, other.tileCount)),
+           completedWettestQuarterPrecipitation(copyBuffer(other.completedWettestQuarterPrecipitation, other.tileCount)),
+            currentYearGlobalMeanTemperatureKelvin(other.currentYearGlobalMeanTemperatureKelvin),
+            currentYearGlobalIceFreeEquilibriumTemperatureKelvin(
+                other.currentYearGlobalIceFreeEquilibriumTemperatureKelvin),
+            currentYearGlobalCryosphereCoolingDeltaKelvin(other.currentYearGlobalCryosphereCoolingDeltaKelvin),
+            currentYearGlobalMeanSurfaceAlbedo(other.currentYearGlobalMeanSurfaceAlbedo),
+            currentYearGlobalCryosphereFraction(other.currentYearGlobalCryosphereFraction),
+            completedGlobalMeanTemperatureKelvin(other.completedGlobalMeanTemperatureKelvin),
+            completedGlobalMeanTemperatureDeltaKelvin(other.completedGlobalMeanTemperatureDeltaKelvin),
+            completedGlobalIceFreeEquilibriumTemperatureKelvin(
+                other.completedGlobalIceFreeEquilibriumTemperatureKelvin),
+            completedGlobalCryosphereCoolingDeltaKelvin(other.completedGlobalCryosphereCoolingDeltaKelvin),
+            completedGlobalMeanSurfaceAlbedo(other.completedGlobalMeanSurfaceAlbedo),
+            completedGlobalCryosphereFraction(other.completedGlobalCryosphereFraction),
+            moistureUpwindEastIndex(allocateBuffer<u32>(other.tileCount)),
           moistureUpwindNorthIndex(allocateBuffer<u32>(other.tileCount)),
           moistureEastWeight(allocateBuffer<f32>(other.tileCount)),
           moistureNorthWeight(allocateBuffer<f32>(other.tileCount)),
@@ -283,6 +307,19 @@ public:
             other.tileCount);
         completedDriestQuarterPrecipitation = copyBuffer(other.completedDriestQuarterPrecipitation, other.tileCount);
         completedWettestQuarterPrecipitation = copyBuffer(other.completedWettestQuarterPrecipitation, other.tileCount);
+        currentYearGlobalMeanTemperatureKelvin = other.currentYearGlobalMeanTemperatureKelvin;
+        currentYearGlobalIceFreeEquilibriumTemperatureKelvin =
+            other.currentYearGlobalIceFreeEquilibriumTemperatureKelvin;
+        currentYearGlobalCryosphereCoolingDeltaKelvin = other.currentYearGlobalCryosphereCoolingDeltaKelvin;
+        currentYearGlobalMeanSurfaceAlbedo = other.currentYearGlobalMeanSurfaceAlbedo;
+        currentYearGlobalCryosphereFraction = other.currentYearGlobalCryosphereFraction;
+        completedGlobalMeanTemperatureKelvin = other.completedGlobalMeanTemperatureKelvin;
+        completedGlobalMeanTemperatureDeltaKelvin = other.completedGlobalMeanTemperatureDeltaKelvin;
+        completedGlobalIceFreeEquilibriumTemperatureKelvin =
+            other.completedGlobalIceFreeEquilibriumTemperatureKelvin;
+        completedGlobalCryosphereCoolingDeltaKelvin = other.completedGlobalCryosphereCoolingDeltaKelvin;
+        completedGlobalMeanSurfaceAlbedo = other.completedGlobalMeanSurfaceAlbedo;
+        completedGlobalCryosphereFraction = other.completedGlobalCryosphereFraction;
         moistureUpwindEastIndex = allocateBuffer<u32>(other.tileCount);
         moistureUpwindNorthIndex = allocateBuffer<u32>(other.tileCount);
         moistureEastWeight = allocateBuffer<f32>(other.tileCount);

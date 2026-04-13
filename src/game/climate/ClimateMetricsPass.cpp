@@ -4,7 +4,11 @@
 #include <cstring>
 #include <limits>
 
+#include "ClimateConfig.h"
+
 namespace {
+
+constexpr ClimateSettings::ClimateConfig CONFIG = ClimateSettings::DEFAULT_CLIMATE_CONFIG;
 
 void clearBuffer(const std::unique_ptr<f32[]>& buffer, const u32 tileCount) {
     if (!buffer || tileCount == 0) {
@@ -21,9 +25,127 @@ u32 getQuarterIndex(const ClimateState& climateState) {
     return std::min(quarterIndex, CLIMATE_QUARTER_COUNT - 1);
 }
 
+struct GlobalClimateAverages {
+    f32 meanTemperatureKelvin = 0.0f;
+    f32 iceFreeEquilibriumTemperatureKelvin = 0.0f;
+    f32 cryosphereCoolingDeltaKelvin = 0.0f;
+    f32 meanSurfaceAlbedo = 0.0f;
+    f32 meanCryosphereFraction = 0.0f;
+    bool valid = false;
+};
+
+f32 getRowWeight(const ClimateState& climateState, const u32 row) {
+    if (climateState.zonalCellWidthMetersByRow && row < climateState.gridHeight) {
+        return std::max(climateState.zonalCellWidthMetersByRow[row], 1e-3f);
+    }
+
+    return 1.0f;
+}
+
+f32 calculateCurrentTurnInsolationForRow(const ClimateState& climateState, const u32 row) {
+    if (!climateState.insolationByTurnRow || climateState.annualTurnCount == 0) {
+        return 0.0f;
+    }
+
+    const u32 turnIndex = climateState.currentTurnIndex % climateState.annualTurnCount;
+    return climateState.insolationByTurnRow[turnIndex * climateState.gridHeight + row];
+}
+
+f32 calculateIceFreeEquilibriumTemperatureKelvin(
+    const ClimateState& climateState,
+    const u32 index,
+    const f32 annualMeanInsolation) {
+    const f32 transmissivity = std::clamp(CONFIG.temperature.atmosphericTransmissivity, 0.0f, 1.0f);
+    const f32 albedo = std::clamp(climateState.baseSurfaceAlbedo[index], 0.0f, 1.0f);
+    const f32 absorbedShortwave = annualMeanInsolation * transmissivity * (1.0f - albedo);
+    const f32 altitudeCoolingK = climateState.relativeAltitude
+        ? climateState.relativeAltitude[index] * CONFIG.temperature.maxAltitudeCoolingK
+        : 0.0f;
+    const f32 outgoingSlope = std::max(CONFIG.temperature.outgoingLongwaveSlopeWm2PerC, 1e-3f);
+    return CONFIG.shared.kelvinOffset
+        + (absorbedShortwave
+            - CONFIG.temperature.outgoingLongwaveBaseWm2
+            - outgoingSlope * altitudeCoolingK) / outgoingSlope;
+}
+
+GlobalClimateAverages calculateGlobalClimateAverages(const ClimateState& climateState) {
+    GlobalClimateAverages result;
+    if (!climateState.temperatureKelvin || !climateState.surfaceAlbedo ||
+        !climateState.baseSurfaceAlbedo || !climateState.relativeAltitude ||
+        !climateState.snowCoverFraction || !climateState.seaIceFraction ||
+        !climateState.insolationByTurnRow || climateState.gridWidth == 0 || climateState.gridHeight == 0) {
+        return result;
+    }
+
+    f32 totalWeight = 0.0f;
+    f32 weightedTemperatureSum = 0.0f;
+    f32 weightedIceFreeEquilibriumTemperatureSum = 0.0f;
+    f32 weightedAlbedoSum = 0.0f;
+    f32 weightedCryosphereSum = 0.0f;
+
+    for (u32 row = 0; row < climateState.gridHeight; ++row) {
+        const f32 rowWeight = getRowWeight(climateState, row);
+        const f32 rowCurrentTurnInsolation = calculateCurrentTurnInsolationForRow(climateState, row);
+        const u32 rowStart = row * climateState.gridWidth;
+        for (u32 column = 0; column < climateState.gridWidth; ++column) {
+            const u32 index = rowStart + column;
+            const f32 cryosphereFraction = std::clamp(
+                std::max(climateState.snowCoverFraction[index], climateState.seaIceFraction[index]),
+                0.0f,
+                1.0f);
+            const f32 iceFreeEquilibriumTemperatureKelvin = calculateIceFreeEquilibriumTemperatureKelvin(
+                climateState,
+                index,
+                rowCurrentTurnInsolation);
+            weightedTemperatureSum += climateState.temperatureKelvin[index] * rowWeight;
+            weightedIceFreeEquilibriumTemperatureSum += iceFreeEquilibriumTemperatureKelvin * rowWeight;
+            weightedAlbedoSum += climateState.surfaceAlbedo[index] * rowWeight;
+            weightedCryosphereSum += cryosphereFraction * rowWeight;
+            totalWeight += rowWeight;
+        }
+    }
+
+    if (totalWeight <= 0.0f) {
+        return result;
+    }
+
+    result.meanTemperatureKelvin = weightedTemperatureSum / totalWeight;
+    result.iceFreeEquilibriumTemperatureKelvin = weightedIceFreeEquilibriumTemperatureSum / totalWeight;
+    result.cryosphereCoolingDeltaKelvin =
+        result.iceFreeEquilibriumTemperatureKelvin - result.meanTemperatureKelvin;
+    result.meanSurfaceAlbedo = weightedAlbedoSum / totalWeight;
+    result.meanCryosphereFraction = weightedCryosphereSum / totalWeight;
+    result.valid = true;
+    return result;
+}
+
+void publishGlobalClimateAverages(ClimateState& climateState) {
+    const GlobalClimateAverages averages = calculateGlobalClimateAverages(climateState);
+    if (!averages.valid) {
+        climateState.currentYearGlobalMeanTemperatureKelvin = 0.0f;
+        climateState.currentYearGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
+        climateState.currentYearGlobalCryosphereCoolingDeltaKelvin = 0.0f;
+        climateState.currentYearGlobalMeanSurfaceAlbedo = 0.0f;
+        climateState.currentYearGlobalCryosphereFraction = 0.0f;
+        return;
+    }
+
+    climateState.currentYearGlobalMeanTemperatureKelvin = averages.meanTemperatureKelvin;
+    climateState.currentYearGlobalIceFreeEquilibriumTemperatureKelvin =
+        averages.iceFreeEquilibriumTemperatureKelvin;
+    climateState.currentYearGlobalCryosphereCoolingDeltaKelvin = averages.cryosphereCoolingDeltaKelvin;
+    climateState.currentYearGlobalMeanSurfaceAlbedo = averages.meanSurfaceAlbedo;
+    climateState.currentYearGlobalCryosphereFraction = averages.meanCryosphereFraction;
+}
+
 void resetCurrentYearMetrics(ClimateState& climateState) {
     climateState.currentYearTurnSamples = 0;
     climateState.currentQuarterTurnSamples.fill(0);
+    climateState.currentYearGlobalMeanTemperatureKelvin = 0.0f;
+    climateState.currentYearGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
+    climateState.currentYearGlobalCryosphereCoolingDeltaKelvin = 0.0f;
+    climateState.currentYearGlobalMeanSurfaceAlbedo = 0.0f;
+    climateState.currentYearGlobalCryosphereFraction = 0.0f;
 
     clearBuffer(climateState.annualPrecipitationAccumulator, climateState.tileCount);
     clearBuffer(climateState.currentYearTemperatureSumKelvin, climateState.tileCount);
@@ -53,6 +175,8 @@ void finalizeCompletedYearMetrics(ClimateState& climateState) {
         !climateState.completedWarmestQuarterMeanTemperatureKelvin ||
         !climateState.completedDriestQuarterPrecipitation ||
         !climateState.completedWettestQuarterPrecipitation ||
+        !climateState.surfaceAlbedo || !climateState.baseSurfaceAlbedo || !climateState.relativeAltitude ||
+        !climateState.snowCoverFraction || !climateState.seaIceFraction || !climateState.insolationByTurnRow ||
         climateState.currentYearTurnSamples == 0) {
         return;
     }
@@ -117,6 +241,18 @@ void finalizeCompletedYearMetrics(ClimateState& climateState) {
         climateState.completedWettestQuarterPrecipitation[index] = wettestQuarterPrecipitation;
     }
 
+    const f32 previousCompletedMeanTemperatureKelvin = climateState.completedGlobalMeanTemperatureKelvin;
+    climateState.completedGlobalMeanTemperatureKelvin = climateState.currentYearGlobalMeanTemperatureKelvin;
+    climateState.completedGlobalIceFreeEquilibriumTemperatureKelvin =
+        climateState.currentYearGlobalIceFreeEquilibriumTemperatureKelvin;
+    climateState.completedGlobalCryosphereCoolingDeltaKelvin =
+        climateState.currentYearGlobalCryosphereCoolingDeltaKelvin;
+    climateState.completedGlobalMeanSurfaceAlbedo = climateState.currentYearGlobalMeanSurfaceAlbedo;
+    climateState.completedGlobalCryosphereFraction = climateState.currentYearGlobalCryosphereFraction;
+    climateState.completedGlobalMeanTemperatureDeltaKelvin = climateState.completedClimateYears > 0
+        ? climateState.completedGlobalMeanTemperatureKelvin - previousCompletedMeanTemperatureKelvin
+        : 0.0f;
+
     ++climateState.completedClimateYears;
 }
 
@@ -150,6 +286,7 @@ void accumulateCurrentTurnMetrics(ClimateState& climateState) {
         }
     }
 
+    publishGlobalClimateAverages(climateState);
     ++climateState.currentYearTurnSamples;
     ++climateState.currentQuarterTurnSamples[quarterIndex];
 }
@@ -177,6 +314,12 @@ void ClimateMetricsPass::initialize(ClimateState& climateState) {
     clearBuffer(climateState.completedWarmestQuarterMeanTemperatureKelvin, climateState.tileCount);
     clearBuffer(climateState.completedDriestQuarterPrecipitation, climateState.tileCount);
     clearBuffer(climateState.completedWettestQuarterPrecipitation, climateState.tileCount);
+    climateState.completedGlobalMeanTemperatureKelvin = 0.0f;
+    climateState.completedGlobalMeanTemperatureDeltaKelvin = 0.0f;
+    climateState.completedGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
+    climateState.completedGlobalCryosphereCoolingDeltaKelvin = 0.0f;
+    climateState.completedGlobalMeanSurfaceAlbedo = 0.0f;
+    climateState.completedGlobalCryosphereFraction = 0.0f;
 
     accumulateCurrentTurnMetrics(climateState);
 }

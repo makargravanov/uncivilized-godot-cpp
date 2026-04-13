@@ -44,6 +44,7 @@ const BIOME_NAMES := {
 @onready var playScene = $PlayScene
 @onready var camera: Camera3D = $Camera3D
 @onready var viewModeLabel: Label = $CanvasLayer/ViewModeLabel
+@onready var climateSummaryLabel: Label = $CanvasLayer/ClimateSummaryLabel
 @onready var tileInfoLabel: Label = $CanvasLayer/TileInfoLabel
 @onready var turnLabel: Label = $CanvasLayer/TurnLabel
 
@@ -53,6 +54,7 @@ func _ready():
 	playScene.set_view_mode(VIEW_NORMAL)
 	_updateLabel(VIEW_NORMAL)
 	_updateTurnLabel()
+	_updateClimateSummaryLabel()
 
 func _unhandled_key_input(event: InputEvent):
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -66,6 +68,7 @@ func _process(_delta: float):
 	if Input.is_key_pressed(KEY_SPACE):
 		playScene.advance_climate_turn()
 	_updateTurnLabel()
+	_updateClimateSummaryLabel()
 
 func _unhandled_input(event: InputEvent):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -157,3 +160,33 @@ func _updateTurnLabel():
 			turnLabel.text = "Ход: %d (считается...)" % turn
 		else:
 			turnLabel.text = "Ход: %d" % turn
+
+func _updateClimateSummaryLabel():
+	if climateSummaryLabel == null:
+		return
+
+	var summary: Dictionary = playScene.get_climate_summary()
+	if summary.is_empty():
+		climateSummaryLabel.text = ""
+		return
+
+	var current_years_completed: int = int(summary.get("climate_years_completed", 0))
+	var current_temperature_c: float = float(summary.get("current_year_mean_temperature_c", 0.0))
+	var ice_free_temperature_c: float = float(summary.get("current_year_ice_free_equilibrium_temperature_c", current_temperature_c))
+	var cryosphere_cooling_delta_c: float = float(summary.get("current_year_cryosphere_cooling_delta_c", 0.0))
+	var current_cryosphere: float = float(summary.get("current_year_mean_cryosphere_fraction", 0.0))
+	var current_albedo: float = float(summary.get("current_year_mean_surface_albedo", 0.0))
+
+	var parts: PackedStringArray = PackedStringArray()
+	parts.append("Климат")
+	parts.append("T факт %.2f°C" % current_temperature_c)
+	parts.append("T без крио %.2f°C" % ice_free_temperature_c)
+	parts.append("крио %+.2f°C" % cryosphere_cooling_delta_c)
+	parts.append("лёд %.0f%%" % (current_cryosphere * 100.0))
+	parts.append("альб %.3f" % current_albedo)
+
+	if current_years_completed > 0:
+		var delta_c: float = float(summary.get("completed_year_temperature_delta_c", 0.0))
+		parts.append("Δ/год %+.3f°C" % delta_c)
+
+	climateSummaryLabel.text = " | ".join(parts)

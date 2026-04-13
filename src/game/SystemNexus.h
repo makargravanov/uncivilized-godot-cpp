@@ -64,7 +64,10 @@ public:
         }
 
         advanceClimateStateOneTurn(*climateState);
-        updateBiomeSnapshotIfNeeded();
+        const bool biomeSnapshotUpdated = updateBiomeSnapshotIfNeeded();
+        if (biomeSnapshotUpdated) {
+            SurfacePropertiesPass::refreshFromTiles(*climateState, mapManager->getTiles());
+        }
         SurfacePropertiesPass::publishToTiles(*climateState, mapManager->getTiles());
         mapManager->updateTemperatureSnapshot(*climateState);
         mapManager->updateSurfaceSnapshot();
@@ -105,7 +108,10 @@ public:
         }
 
         if (mapManager) {
-            updateBiomeSnapshotIfNeeded();
+            const bool biomeSnapshotUpdated = updateBiomeSnapshotIfNeeded();
+            if (biomeSnapshotUpdated) {
+                SurfacePropertiesPass::refreshFromTiles(*climateState, mapManager->getTiles());
+            }
             SurfacePropertiesPass::publishToTiles(*climateState, mapManager->getTiles());
             mapManager->updateTemperatureSnapshot(*climateState);
             mapManager->updateSurfaceSnapshot();
@@ -149,13 +155,14 @@ private:
         ClimateMetricsPass::advanceOneTurn(state);
     }
 
-    static void updateBiomeSnapshotIfNeeded() {
+    static bool updateBiomeSnapshotIfNeeded() {
         if (!mapManager || !climateState || climateState->completedClimateYears <= appliedClimateBiomeYears) {
-            return;
+            return false;
         }
 
-        mapManager->updateBiomeSnapshot(*climateState);
+        const bool biomeSnapshotUpdated = mapManager->updateBiomeSnapshot(*climateState);
         appliedClimateBiomeYears = climateState->completedClimateYears;
+        return biomeSnapshotUpdated;
     }
 
     static void discardPendingClimateTurn() {

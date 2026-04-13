@@ -171,11 +171,7 @@ f32 calculateAltitudeCoolingK(const ClimateState& climateState, const u32 index)
     return climateState.relativeAltitude[index] * CONFIG.temperature.maxAltitudeCoolingK;
 }
 
-f32 sampleTransportTemperatureC(const f32* temperatureKelvin, const ClimateState& climateState, const u32 index) {
-    return sampleTemperatureC(temperatureKelvin, index) + calculateAltitudeCoolingK(climateState, index);
-}
-
-f32 calculateRadiativeEquilibriumTemperatureC(const f32 absorbedShortwaveWm2, const f32 altitudeCoolingK) {
+f32 calculateLocalRadiativeEquilibriumTemperatureC(const f32 absorbedShortwaveWm2, const f32 altitudeCoolingK) {
     const f32 outgoingSlope = std::max(CONFIG.temperature.outgoingLongwaveSlopeWm2PerC, 1e-3f);
     return (absorbedShortwaveWm2
         - CONFIG.temperature.outgoingLongwaveBaseWm2
@@ -210,7 +206,7 @@ void initializeFromAnnualMeanEquilibrium(ClimateState& climateState) {
                 ? climateState.surfaceAlbedo[index]
                 : CONFIG.surface.referenceAlbedo;
             const f32 absorbedShortwave = calculateAbsorbedShortwave(annualMeanInsolation, surfaceAlbedo);
-            const f32 equilibriumTemperatureC = calculateRadiativeEquilibriumTemperatureC(
+            const f32 equilibriumTemperatureC = calculateLocalRadiativeEquilibriumTemperatureC(
                 absorbedShortwave,
                 calculateAltitudeCoolingK(climateState, index));
             climateState.temperatureKelvin[index] = CONFIG.shared.kelvinOffset + equilibriumTemperatureC;
@@ -230,10 +226,7 @@ LinearDiffusionCoefficients calculateDiffusionLinearCoefficients(
 
     const auto accumulateTendency = [&](const u32 neighborRow, const u32 neighborColumn, const f32 inverseDistanceSquared) {
         const u32 neighborIndex = flattenIndex(climateState, neighborRow, neighborColumn);
-        const f32 neighborTemperatureC = sampleTransportTemperatureC(
-            previousTemperatureKelvin,
-            climateState,
-            neighborIndex);
+        const f32 neighborTemperatureC = sampleTemperatureC(previousTemperatureKelvin, neighborIndex);
         const f32 thermalDiffusivity = getContactThermalDiffusivity(climateState, centerIndex, neighborIndex);
         coefficients.equilibriumSourceCPerSecond +=
             thermalDiffusivity * neighborTemperatureC * inverseDistanceSquared;
@@ -266,7 +259,7 @@ f32 calculateUpwindGradientEastPerMeter(
     const f32 zonalCellWidthMeters,
     const f32 eastVelocityMps) {
     const u32 centerIndex = flattenIndex(climateState, row, column);
-    const f32 centerTemperatureC = sampleTransportTemperatureC(previousTemperatureKelvin, climateState, centerIndex);
+    const f32 centerTemperatureC = sampleTemperatureC(previousTemperatureKelvin, centerIndex);
     const u32 westIndex = flattenIndex(
         climateState,
         row,
@@ -277,11 +270,11 @@ f32 calculateUpwindGradientEastPerMeter(
         wrapColumn(static_cast<i32>(column) + 1, climateState.gridWidth));
 
     if (eastVelocityMps >= 0.0f) {
-        return (centerTemperatureC - sampleTransportTemperatureC(previousTemperatureKelvin, climateState, westIndex))
+        return (centerTemperatureC - sampleTemperatureC(previousTemperatureKelvin, westIndex))
             / std::max(zonalCellWidthMeters, 1.0f);
     }
 
-    return (sampleTransportTemperatureC(previousTemperatureKelvin, climateState, eastIndex) - centerTemperatureC)
+    return (sampleTemperatureC(previousTemperatureKelvin, eastIndex) - centerTemperatureC)
         / std::max(zonalCellWidthMeters, 1.0f);
 }
 
@@ -293,7 +286,7 @@ f32 calculateUpwindGradientSouthPerMeter(
     const f32 meridionalCellHeightMeters,
     const f32 southVelocityMps) {
     const u32 centerIndex = flattenIndex(climateState, row, column);
-    const f32 centerTemperatureC = sampleTransportTemperatureC(previousTemperatureKelvin, climateState, centerIndex);
+    const f32 centerTemperatureC = sampleTemperatureC(previousTemperatureKelvin, centerIndex);
 
     if (southVelocityMps >= 0.0f) {
         if (row == 0) {
@@ -301,7 +294,7 @@ f32 calculateUpwindGradientSouthPerMeter(
         }
 
         const u32 northIndex = flattenIndex(climateState, row - 1, column);
-        return (centerTemperatureC - sampleTransportTemperatureC(previousTemperatureKelvin, climateState, northIndex))
+        return (centerTemperatureC - sampleTemperatureC(previousTemperatureKelvin, northIndex))
             / std::max(meridionalCellHeightMeters, 1.0f);
     }
 
@@ -310,7 +303,7 @@ f32 calculateUpwindGradientSouthPerMeter(
     }
 
     const u32 southIndex = flattenIndex(climateState, row + 1, column);
-    return (sampleTransportTemperatureC(previousTemperatureKelvin, climateState, southIndex) - centerTemperatureC)
+    return (sampleTemperatureC(previousTemperatureKelvin, southIndex) - centerTemperatureC)
         / std::max(meridionalCellHeightMeters, 1.0f);
 }
 
@@ -391,9 +384,6 @@ void advanceEnergyBalanceOneTurn(ClimateState& climateState, const u32 turnIndex
             const f32 altitudeCoolingK = calculateAltitudeCoolingK(climateState, index);
             failIfNonFinite(altitudeCoolingK,
                 "Non-finite altitude cooling in TemperaturePass::advanceEnergyBalanceOneTurn().");
-            const f32 previousTransportTemperatureC = previousTemperatureC + altitudeCoolingK;
-            failIfNonFinite(previousTransportTemperatureC,
-                "Non-finite previous transport temperature in TemperaturePass::advanceEnergyBalanceOneTurn().");
             const f32 surfaceAlbedo = climateState.surfaceAlbedo
                 ? climateState.surfaceAlbedo[index]
                 : CONFIG.surface.referenceAlbedo;
@@ -413,7 +403,8 @@ void advanceEnergyBalanceOneTurn(ClimateState& climateState, const u32 turnIndex
 
             const f32 radiativeSourceCPerSecond =
                 (absorbedShortwave
-                    - CONFIG.temperature.outgoingLongwaveBaseWm2) / arealHeatCapacity;
+                    - CONFIG.temperature.outgoingLongwaveBaseWm2
+                    - outgoingSlope * altitudeCoolingK) / arealHeatCapacity;
             const f32 radiativeRelaxationRatePerSecond = outgoingSlope / arealHeatCapacity;
             failIfNonFinite(radiativeSourceCPerSecond,
                 "Non-finite radiative source in TemperaturePass::advanceEnergyBalanceOneTurn().");
@@ -433,7 +424,7 @@ void advanceEnergyBalanceOneTurn(ClimateState& climateState, const u32 turnIndex
             failIfNonFinite(totalSourceCPerSecond,
                 "Non-finite total source in TemperaturePass::advanceEnergyBalanceOneTurn().");
 
-            f32 transportTemperatureAfterRadiativeDiffusiveStepC = previousTransportTemperatureC;
+            f32 surfaceTemperatureAfterRadiativeDiffusiveStepC = previousTemperatureC;
             if (totalRelaxationRatePerSecond > 1e-9f) {
                 const f32 equilibriumTemperatureC = totalSourceCPerSecond / totalRelaxationRatePerSecond;
                 const f32 decay = std::exp(-totalRelaxationRatePerSecond * timeStepSeconds);
@@ -441,16 +432,16 @@ void advanceEnergyBalanceOneTurn(ClimateState& climateState, const u32 turnIndex
                     "Non-finite equilibrium temperature in TemperaturePass::advanceEnergyBalanceOneTurn().");
                 failIfNonFinite(decay,
                     "Non-finite decay factor in TemperaturePass::advanceEnergyBalanceOneTurn().");
-                transportTemperatureAfterRadiativeDiffusiveStepC =
-                    equilibriumTemperatureC + (previousTransportTemperatureC - equilibriumTemperatureC) * decay;
+                surfaceTemperatureAfterRadiativeDiffusiveStepC =
+                    equilibriumTemperatureC + (previousTemperatureC - equilibriumTemperatureC) * decay;
             } else {
-                transportTemperatureAfterRadiativeDiffusiveStepC += totalSourceCPerSecond * timeStepSeconds;
+                surfaceTemperatureAfterRadiativeDiffusiveStepC += totalSourceCPerSecond * timeStepSeconds;
             }
-            failIfNonFinite(transportTemperatureAfterRadiativeDiffusiveStepC,
-                "Non-finite radiative-diffusive transport temperature in TemperaturePass::advanceEnergyBalanceOneTurn().");
+            failIfNonFinite(surfaceTemperatureAfterRadiativeDiffusiveStepC,
+                "Non-finite radiative-diffusive surface temperature in TemperaturePass::advanceEnergyBalanceOneTurn().");
 
             const f32 updatedTemperatureKelvin = CONFIG.shared.kelvinOffset
-                + (transportTemperatureAfterRadiativeDiffusiveStepC - altitudeCoolingK);
+                + surfaceTemperatureAfterRadiativeDiffusiveStepC;
             failIfNonFinite(updatedTemperatureKelvin,
                 "Non-finite updated temperature in TemperaturePass::advanceEnergyBalanceOneTurn().");
             climateState.temperatureKelvin[index] = updatedTemperatureKelvin;
@@ -467,11 +458,7 @@ void advanceEnergyBalanceOneTurn(ClimateState& climateState, const u32 turnIndex
         const u32 rowStart = row * climateState.gridWidth;
         for (u32 column = 0; column < climateState.gridWidth; ++column) {
             const u32 index = rowStart + column;
-            const f32 altitudeCoolingK = calculateAltitudeCoolingK(climateState, index);
-            const f32 previousTransportTemperatureC = sampleTransportTemperatureC(
-                previousTemperatureKelvin,
-                climateState,
-                index);
+            const f32 previousTemperatureC = sampleTemperatureC(previousTemperatureKelvin, index);
             const f32 advectiveTendencyCPerSecond = calculateAdvectiveTendencyCPerSecond(
                 previousTemperatureKelvin,
                 climateState,
@@ -481,10 +468,10 @@ void advanceEnergyBalanceOneTurn(ClimateState& climateState, const u32 turnIndex
             failIfNonFinite(advectiveTendencyCPerSecond,
                 "Non-finite advective tendency in TemperaturePass::advanceEnergyBalanceOneTurn().");
 
-            const f32 advectedTransportTemperatureC = previousTransportTemperatureC
+            const f32 advectedTemperatureC = previousTemperatureC
                 + advectiveTendencyCPerSecond * timeStepSeconds;
             const f32 advectedTemperatureKelvin = CONFIG.shared.kelvinOffset
-                + (advectedTransportTemperatureC - altitudeCoolingK);
+                + advectedTemperatureC;
             failIfNonFinite(advectedTemperatureKelvin,
                 "Non-finite advected temperature in TemperaturePass::advanceEnergyBalanceOneTurn().");
             climateState.temperatureKelvin[index] = advectedTemperatureKelvin;

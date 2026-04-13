@@ -66,6 +66,7 @@ godot::Color getWindDebugColor(const f32 magnitude) {
 void PlayScene::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_view_mode", "mode"), &PlayScene::set_view_mode);
     godot::ClassDB::bind_method(godot::D_METHOD("get_tile_info_at", "worldX", "worldZ"), &PlayScene::get_tile_info_at);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_climate_summary"), &PlayScene::get_climate_summary);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_climate_turn"), &PlayScene::advance_climate_turn);
     godot::ClassDB::bind_method(godot::D_METHOD("is_climate_turn_in_progress"), &PlayScene::is_climate_turn_in_progress);
     godot::ClassDB::bind_method(godot::D_METHOD("get_current_turn"), &PlayScene::get_current_turn);
@@ -171,6 +172,40 @@ bool PlayScene::is_climate_turn_in_progress() const {
 
 int PlayScene::get_current_turn() const {
     return static_cast<int>(SystemNexus::currentClimateTurn());
+}
+
+godot::Dictionary PlayScene::get_climate_summary() const {
+    godot::Dictionary result;
+    const ClimateState* climateState = SystemNexus::getClimateState();
+    if (!climateState) {
+        return result;
+    }
+
+    result["climate_years_completed"] = static_cast<int>(climateState->completedClimateYears);
+    result["current_year_mean_temperature_k"] = climateState->currentYearGlobalMeanTemperatureKelvin;
+    result["current_year_mean_temperature_c"] =
+        climateState->currentYearGlobalMeanTemperatureKelvin - KELVIN_OFFSET;
+    result["current_year_ice_free_equilibrium_temperature_k"] =
+        climateState->currentYearGlobalIceFreeEquilibriumTemperatureKelvin;
+    result["current_year_ice_free_equilibrium_temperature_c"] =
+        climateState->currentYearGlobalIceFreeEquilibriumTemperatureKelvin - KELVIN_OFFSET;
+    result["current_year_cryosphere_cooling_delta_c"] =
+        climateState->currentYearGlobalCryosphereCoolingDeltaKelvin;
+    result["current_year_mean_surface_albedo"] = climateState->currentYearGlobalMeanSurfaceAlbedo;
+    result["current_year_mean_cryosphere_fraction"] = climateState->currentYearGlobalCryosphereFraction;
+    result["completed_year_mean_temperature_k"] = climateState->completedGlobalMeanTemperatureKelvin;
+    result["completed_year_mean_temperature_c"] =
+        climateState->completedGlobalMeanTemperatureKelvin - KELVIN_OFFSET;
+    result["completed_year_temperature_delta_c"] = climateState->completedGlobalMeanTemperatureDeltaKelvin;
+    result["completed_year_ice_free_equilibrium_temperature_k"] =
+        climateState->completedGlobalIceFreeEquilibriumTemperatureKelvin;
+    result["completed_year_ice_free_equilibrium_temperature_c"] =
+        climateState->completedGlobalIceFreeEquilibriumTemperatureKelvin - KELVIN_OFFSET;
+    result["completed_year_cryosphere_cooling_delta_c"] =
+        climateState->completedGlobalCryosphereCoolingDeltaKelvin;
+    result["completed_year_mean_surface_albedo"] = climateState->completedGlobalMeanSurfaceAlbedo;
+    result["completed_year_mean_cryosphere_fraction"] = climateState->completedGlobalCryosphereFraction;
+    return result;
 }
 
 godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float worldZ) {
@@ -357,7 +392,3 @@ void PlayScene::refreshWindDebugView() {
 
     windDebugMesh->surface_end();
 }
-
-
-
-

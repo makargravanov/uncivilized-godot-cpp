@@ -43,6 +43,12 @@ offset_top = 44.0
 offset_right = 300.0
 offset_bottom = 68.0
 
+[node name="ClimateSummaryLabel" type="Label" parent="CanvasLayer"]
+offset_left = 16.0
+offset_top = 72.0
+offset_right = 560.0
+offset_bottom = 96.0
+
 [node name="TileInfoLabel" type="Label" parent="CanvasLayer"]
 anchors_preset = 3
 anchor_left = 1.0
