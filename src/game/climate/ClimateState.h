@@ -59,6 +59,9 @@ public:
     u32 gridWidth = 0;
     u32 gridHeight = 0;
     u32 tileCount = 0;
+    f32 meridionalCellHeightMeters = 0.0f;
+    f32 inverseMeridionalCellHeightMeters = 0.0f;
+    f32 inverseMeridionalDistanceSquared = 0.0f;
 
     u64 absoluteTurnIndex = 0;
     u32 currentTurnIndex = 0;
@@ -107,6 +110,9 @@ public:
     // Minimal static inputs needed by the temperature model.
     std::unique_ptr<f32[]> latitudeRadians;
     std::unique_ptr<f32[]> relativeAltitude;
+    std::unique_ptr<f32[]> zonalCellWidthMetersByRow;
+    std::unique_ptr<f32[]> inverseZonalCellWidthByRow;
+    std::unique_ptr<f32[]> inverseZonalDistanceSquaredByRow;
     u32 annualTurnCount = 0;
     std::unique_ptr<f32[]> insolationByTurnRow;
 
@@ -152,12 +158,18 @@ public:
           moistureMixingFactor(std::make_unique<f32[]>(tileCount)),
           moistureOrographicCoolingK(std::make_unique<f32[]>(tileCount)),
           latitudeRadians(std::make_unique<f32[]>(tileCount)),
-          relativeAltitude(std::make_unique<f32[]>(tileCount)) {}
+          relativeAltitude(std::make_unique<f32[]>(tileCount)),
+          zonalCellWidthMetersByRow(std::make_unique<f32[]>(height)),
+          inverseZonalCellWidthByRow(std::make_unique<f32[]>(height)),
+          inverseZonalDistanceSquaredByRow(std::make_unique<f32[]>(height)) {}
 
     ClimateState(const ClimateState& other)
         : gridWidth(other.gridWidth),
           gridHeight(other.gridHeight),
           tileCount(other.tileCount),
+                    meridionalCellHeightMeters(other.meridionalCellHeightMeters),
+                    inverseMeridionalCellHeightMeters(other.inverseMeridionalCellHeightMeters),
+                    inverseMeridionalDistanceSquared(other.inverseMeridionalDistanceSquared),
           absoluteTurnIndex(other.absoluteTurnIndex),
           currentTurnIndex(other.currentTurnIndex),
           currentYearFraction(other.currentYearFraction),
@@ -209,6 +221,9 @@ public:
           moistureOrographicCoolingK(allocateBuffer<f32>(other.tileCount)),
           latitudeRadians(copyBuffer(other.latitudeRadians, other.tileCount)),
           relativeAltitude(copyBuffer(other.relativeAltitude, other.tileCount)),
+          zonalCellWidthMetersByRow(copyBuffer(other.zonalCellWidthMetersByRow, other.gridHeight)),
+          inverseZonalCellWidthByRow(copyBuffer(other.inverseZonalCellWidthByRow, other.gridHeight)),
+          inverseZonalDistanceSquaredByRow(copyBuffer(other.inverseZonalDistanceSquaredByRow, other.gridHeight)),
           annualTurnCount(other.annualTurnCount),
           insolationByTurnRow(copyBuffer(other.insolationByTurnRow,
               other.annualTurnCount * other.gridHeight)) {}
@@ -221,6 +236,9 @@ public:
         gridWidth = other.gridWidth;
         gridHeight = other.gridHeight;
         tileCount = other.tileCount;
+        meridionalCellHeightMeters = other.meridionalCellHeightMeters;
+        inverseMeridionalCellHeightMeters = other.inverseMeridionalCellHeightMeters;
+        inverseMeridionalDistanceSquared = other.inverseMeridionalDistanceSquared;
         absoluteTurnIndex = other.absoluteTurnIndex;
         currentTurnIndex = other.currentTurnIndex;
         currentYearFraction = other.currentYearFraction;
@@ -273,6 +291,9 @@ public:
         moistureOrographicCoolingK = allocateBuffer<f32>(other.tileCount);
         latitudeRadians = copyBuffer(other.latitudeRadians, other.tileCount);
         relativeAltitude = copyBuffer(other.relativeAltitude, other.tileCount);
+        zonalCellWidthMetersByRow = copyBuffer(other.zonalCellWidthMetersByRow, other.gridHeight);
+        inverseZonalCellWidthByRow = copyBuffer(other.inverseZonalCellWidthByRow, other.gridHeight);
+        inverseZonalDistanceSquaredByRow = copyBuffer(other.inverseZonalDistanceSquaredByRow, other.gridHeight);
         annualTurnCount = other.annualTurnCount;
         insolationByTurnRow = copyBuffer(
             other.insolationByTurnRow,

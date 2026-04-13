@@ -3,6 +3,10 @@
 #include <algorithm>
 #include <cstring>
 
+#include <cmath>
+
+#include <godot_cpp/core/error_macros.hpp>
+
 #include "ClimateConfig.h"
 #include "game/map/BiomeType.h"
 #include "game/map/FeatureType.h"
@@ -11,6 +15,14 @@
 namespace {
 
 constexpr ClimateSettings::ClimateConfig CONFIG = ClimateSettings::DEFAULT_CLIMATE_CONFIG;
+
+#if defined(DEBUG_ENABLED)
+void failIfNonFinite(const f32 value, const char* message) {
+    CRASH_COND_MSG(!std::isfinite(value), message);
+}
+#else
+inline void failIfNonFinite(const f32, const char*) {}
+#endif
 
 bool hasFeature(const FeatureFlags features, const FeatureFlags flag) {
     return (features & flag) != 0;
@@ -107,6 +119,12 @@ void recomputeDynamicSurfaceProperties(ClimateState& climateState) {
         const f32 forestCoverFraction = std::clamp(climateState.forestCoverFraction[index], 0.0f, 1.0f);
         const f32 snowCoverFraction = std::clamp(climateState.snowCoverFraction[index], 0.0f, 1.0f);
         const f32 seaIceFraction = std::clamp(climateState.seaIceFraction[index], 0.0f, 1.0f);
+        failIfNonFinite(forestCoverFraction,
+            "Non-finite forest cover in SurfacePropertiesPass::recomputeDynamicSurfaceProperties().");
+        failIfNonFinite(snowCoverFraction,
+            "Non-finite snow cover in SurfacePropertiesPass::recomputeDynamicSurfaceProperties().");
+        failIfNonFinite(seaIceFraction,
+            "Non-finite sea ice fraction in SurfacePropertiesPass::recomputeDynamicSurfaceProperties().");
 
         f32 surfaceAlbedo = climateState.baseSurfaceAlbedo[index];
         if (!isOceanTile(climateState, index) && forestCoverFraction > 0.0f) {
@@ -124,6 +142,8 @@ void recomputeDynamicSurfaceProperties(ClimateState& climateState) {
             surfaceAlbedo += (CONFIG.surface.iceAlbedo - surfaceAlbedo) * visibleSnowFraction;
         }
         climateState.surfaceAlbedo[index] = std::clamp(surfaceAlbedo, 0.0f, 1.0f);
+        failIfNonFinite(climateState.surfaceAlbedo[index],
+            "Non-finite surface albedo in SurfacePropertiesPass::recomputeDynamicSurfaceProperties().");
 
         f32 effectiveHeatCapacity = climateState.baseHeatCapacity[index];
         if (!isOceanTile(climateState, index)) {
@@ -134,6 +154,8 @@ void recomputeDynamicSurfaceProperties(ClimateState& climateState) {
                     - effectiveHeatCapacity) * seaIceFraction;
         }
         climateState.effectiveHeatCapacity[index] = std::max(effectiveHeatCapacity, 1e-3f);
+        failIfNonFinite(climateState.effectiveHeatCapacity[index],
+            "Non-finite effective heat capacity in SurfacePropertiesPass::recomputeDynamicSurfaceProperties().");
     }
 }
 
@@ -175,6 +197,10 @@ void updateCryosphereState(ClimateState& climateState) {
     for (u32 index = 0; index < climateState.tileCount; ++index) {
         const f32 temperatureCelsius = climateState.temperatureKelvin[index] - CONFIG.shared.kelvinOffset;
         const f32 turnPrecipitation = std::max(climateState.turnPrecipitation[index], 0.0f);
+        failIfNonFinite(temperatureCelsius,
+            "Non-finite temperature in SurfacePropertiesPass::updateCryosphereState().");
+        failIfNonFinite(turnPrecipitation,
+            "Non-finite precipitation in SurfacePropertiesPass::updateCryosphereState().");
 
         if (isOceanTile(climateState, index)) {
             climateState.snowWaterEquivalent[index] = 0.0f;
@@ -217,6 +243,10 @@ void updateCryosphereState(ClimateState& climateState) {
             snowWaterEquivalent / std::max(CONFIG.surface.snowFullCoverWaterEquivalent, 1e-4f),
             0.0f,
             1.0f);
+        failIfNonFinite(climateState.snowWaterEquivalent[index],
+            "Non-finite snow water equivalent in SurfacePropertiesPass::updateCryosphereState().");
+        failIfNonFinite(climateState.snowCoverFraction[index],
+            "Non-finite snow cover fraction in SurfacePropertiesPass::updateCryosphereState().");
     }
 }
 

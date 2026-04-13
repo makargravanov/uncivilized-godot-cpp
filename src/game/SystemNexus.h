@@ -154,9 +154,7 @@ private:
             return;
         }
 
-        if (mapManager->updateBiomeSnapshot(*climateState)) {
-            SurfacePropertiesPass::refreshFromTiles(*climateState, mapManager->getTiles());
-        }
+        mapManager->updateBiomeSnapshot(*climateState);
         appliedClimateBiomeYears = climateState->completedClimateYears;
     }
 

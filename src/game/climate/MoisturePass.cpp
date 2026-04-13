@@ -4,15 +4,28 @@
 #include <cmath>
 #include <cstring>
 
+#include <godot_cpp/core/error_macros.hpp>
+
 #include "ClimateConfig.h"
 
 namespace {
 
 constexpr ClimateSettings::ClimateConfig CONFIG = ClimateSettings::DEFAULT_CLIMATE_CONFIG;
 
+#if defined(DEBUG_ENABLED)
+void failIfNonFinite(const f32 value, const char* message) {
+    CRASH_COND_MSG(!std::isfinite(value), message);
+}
+#else
+inline void failIfNonFinite(const f32, const char*) {}
+#endif
+
 // ─── helpers ───────────────────────────────────────────────────────
 
 f32 calculateSaturationVaporPressureKpa(f32 temperatureCelsius) {
+    CRASH_COND_MSG(
+        temperatureCelsius <= -CONFIG.shared.magnusCoefficientB,
+        "Temperature crossed the Magnus humidity singularity in MoisturePass::calculateSaturationVaporPressureKpa().");
     return CONFIG.shared.magnusBasePressureKpa * std::exp(
         CONFIG.shared.magnusCoefficientA * temperatureCelsius
         / (temperatureCelsius + CONFIG.shared.magnusCoefficientB));
@@ -122,12 +135,22 @@ void applyOceanEvaporation(ClimateState& climateState) {
         const f32 maxHumidity = calculateMaxSpecificHumidity(temperatureCelsius);
         const f32 currentHumidity = climateState.humidityKgPerKg[i];
         const f32 humidityDeficit = std::max(0.0f, maxHumidity - currentHumidity);
+        failIfNonFinite(temperatureCelsius,
+            "Non-finite temperature in MoisturePass::applyOceanEvaporation().");
+        failIfNonFinite(maxHumidity,
+            "Non-finite max humidity in MoisturePass::applyOceanEvaporation().");
+        failIfNonFinite(currentHumidity,
+            "Non-finite current humidity in MoisturePass::applyOceanEvaporation().");
+        failIfNonFinite(humidityDeficit,
+            "Non-finite humidity deficit in MoisturePass::applyOceanEvaporation().");
 
         climateState.humidityKgPerKg[i] += humidityDeficit
             * CONFIG.moisture.oceanEvaporationRate
             * CONFIG.moisture.oceanEvaporationWindFactor
             * openWaterFraction;
         climateState.humidityKgPerKg[i] = std::min(climateState.humidityKgPerKg[i], maxHumidity);
+        failIfNonFinite(climateState.humidityKgPerKg[i],
+            "Non-finite updated humidity in MoisturePass::applyOceanEvaporation().");
     }
 }
 
@@ -208,7 +231,13 @@ void advectMoistureOneSubStep(const ClimateState& climateState) {
             eastWeight[idx] * previousHumidity[upwindEastIndex[idx]]
             + northWeight[idx] * previousHumidity[upwindNorthIndex[idx]];
         const f32 humidityHere = previousHumidity[idx];
+        failIfNonFinite(upwindBlended,
+            "Non-finite upwind humidity blend in MoisturePass::advectMoistureOneSubStep().");
+        failIfNonFinite(humidityHere,
+            "Non-finite humidity source in MoisturePass::advectMoistureOneSubStep().");
         currentHumidity[idx] = humidityHere + (upwindBlended - humidityHere) * mixingFactor[idx];
+        failIfNonFinite(currentHumidity[idx],
+            "Non-finite advected humidity in MoisturePass::advectMoistureOneSubStep().");
     }
 }
 
@@ -230,9 +259,17 @@ void applyCondensationAndPrecipitation(ClimateState& climateState) {
     for (u32 i = 0; i < climateState.tileCount; ++i) {
         const f32 temperatureCelsius = climateState.temperatureKelvin[i] - CONFIG.shared.kelvinOffset;
         const f32 maxHumidity = calculateMaxSpecificHumidity(temperatureCelsius);
+        failIfNonFinite(temperatureCelsius,
+            "Non-finite temperature in MoisturePass::applyCondensationAndPrecipitation().");
+        failIfNonFinite(maxHumidity,
+            "Non-finite max humidity in MoisturePass::applyCondensationAndPrecipitation().");
 
         f32 currentHumidity = climateState.humidityKgPerKg[i];
         const f32 ambientExcess = std::max(0.0f, currentHumidity - maxHumidity);
+        failIfNonFinite(currentHumidity,
+            "Non-finite current humidity in MoisturePass::applyCondensationAndPrecipitation().");
+        failIfNonFinite(ambientExcess,
+            "Non-finite ambient excess in MoisturePass::applyCondensationAndPrecipitation().");
         if (ambientExcess > 0.0f) {
             currentHumidity = maxHumidity;
             climateState.turnPrecipitation[i] += ambientExcess;
@@ -243,12 +280,22 @@ void applyCondensationAndPrecipitation(ClimateState& climateState) {
             const f32 liftedMaxHumidity = calculateMaxSpecificHumidity(liftedTemperatureCelsius);
             const f32 orographicCondensation = std::max(0.0f, currentHumidity - liftedMaxHumidity)
                 * CONFIG.moisture.orographicPrecipitationEfficiency;
+            failIfNonFinite(liftedTemperatureCelsius,
+                "Non-finite lifted temperature in MoisturePass::applyCondensationAndPrecipitation().");
+            failIfNonFinite(liftedMaxHumidity,
+                "Non-finite lifted max humidity in MoisturePass::applyCondensationAndPrecipitation().");
+            failIfNonFinite(orographicCondensation,
+                "Non-finite orographic condensation in MoisturePass::applyCondensationAndPrecipitation().");
 
             currentHumidity = std::max(0.0f, currentHumidity - orographicCondensation);
             climateState.turnPrecipitation[i] += orographicCondensation;
         }
 
         climateState.humidityKgPerKg[i] = currentHumidity;
+        failIfNonFinite(climateState.humidityKgPerKg[i],
+            "Non-finite stored humidity in MoisturePass::applyCondensationAndPrecipitation().");
+        failIfNonFinite(climateState.turnPrecipitation[i],
+            "Non-finite turn precipitation in MoisturePass::applyCondensationAndPrecipitation().");
     }
 }
 
