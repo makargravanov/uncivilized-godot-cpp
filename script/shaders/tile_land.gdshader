@@ -7,21 +7,15 @@ shader_type spatial;
 uniform int view_mode : hint_range(0, 6) = 0;
 
 varying flat float biome_id;
-varying flat float river_edges;
-varying flat float features;
+varying flat float cryosphere_value;
 varying flat float overlay_value;
 varying vec3 world_pos;
 
-bool has_ice_cover(float feature_flags) {
-	return mod(floor(feature_flags / 16.0), 2.0) >= 0.5;
-}
-
 void vertex() {
-	biome_id      = INSTANCE_CUSTOM.x;
-	river_edges   = INSTANCE_CUSTOM.y;
-	features      = INSTANCE_CUSTOM.z;
+	biome_id = INSTANCE_CUSTOM.x;
+	cryosphere_value = INSTANCE_CUSTOM.y;
 	overlay_value = INSTANCE_CUSTOM.w;
-	world_pos     = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 
 // ── Overlay heatmap ramp ─────────────────────────────────────────
@@ -187,16 +181,13 @@ void fragment() {
 		color += (med_noise - 0.5) * 0.06;   // subtle medium detail
 		color += (fine_noise - 0.5) * 0.03;   // fine grain
 
-		if (has_ice_cover(features)) {
-			vec3 snow_color = vec3(0.92, 0.95, 0.98);
-			float snow_mix = 0.58 + large_noise * 0.12;
-			color = mix(color, snow_color, clamp(snow_mix, 0.0, 0.82));
-		}
-
-		// Slight roughness variation from noise.
+		float snow_cover = clamp(cryosphere_value, 0.0, 1.0);
 		float roughness = 0.85 + (med_noise - 0.5) * 0.1;
-		if (has_ice_cover(features)) {
-			roughness = mix(roughness, 0.72, 0.6);
+		if (snow_cover > 0.0) {
+			vec3 snow_color = vec3(0.92, 0.95, 0.98);
+			float snow_mix = clamp(snow_cover * (0.58 + large_noise * 0.12), 0.0, 0.90);
+			color = mix(color, snow_color, snow_mix);
+			roughness = mix(roughness, 0.72, snow_mix);
 		}
 
 		ALBEDO    = clamp(color, vec3(0.0), vec3(1.0));

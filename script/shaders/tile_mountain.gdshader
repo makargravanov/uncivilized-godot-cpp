@@ -7,21 +7,17 @@ shader_type spatial;
 uniform int view_mode : hint_range(0, 6) = 0;
 
 varying flat float biome_id;
-varying flat float features;
+varying flat float cryosphere_value;
 varying flat float overlay_value;
 varying vec3 world_pos;
 varying vec3 world_normal;
 
 void vertex() {
-	biome_id      = INSTANCE_CUSTOM.x;
-	features      = INSTANCE_CUSTOM.z;
+	biome_id = INSTANCE_CUSTOM.x;
+	cryosphere_value = INSTANCE_CUSTOM.y;
 	overlay_value = INSTANCE_CUSTOM.w;
-	world_pos     = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	world_normal  = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
-}
-
-bool has_ice_cover(float feature_flags) {
-	return mod(floor(feature_flags / 16.0), 2.0) >= 0.5;
+	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
 
 // ── Noise utilities ──────────────────────────────────────────────
@@ -175,6 +171,7 @@ void fragment() {
 			// ALPINE — snow on flat surfaces, exposed rock on steep slopes.
 			float snow_noise = value_noise(noise_uv * 1.2) * 0.15;
 			float snow_factor = smoothstep(0.55, 0.75, slope + snow_noise);
+			snow_factor = max(snow_factor, clamp(cryosphere_value, 0.0, 1.0));
 			color = mix(rock, SNOW_COLOR, snow_factor);
 			roughness = mix(0.9, 0.6, snow_factor);  // snow is smoother
 		} else {
@@ -187,8 +184,9 @@ void fragment() {
 			roughness = mix(0.9, 0.84, vegetation_factor);
 		}
 
-		if (has_ice_cover(features)) {
-			float snow_overlay = smoothstep(0.35, 0.85, slope) * 0.72;
+		float snow_cover = clamp(cryosphere_value, 0.0, 1.0);
+		if (snow_cover > 0.0 && biome != 15) {
+			float snow_overlay = snow_cover * smoothstep(0.35, 0.85, slope);
 			color = mix(color, SNOW_COLOR, snow_overlay);
 			roughness = mix(roughness, 0.68, snow_overlay);
 		}

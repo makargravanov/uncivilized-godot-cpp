@@ -71,7 +71,6 @@ struct ClimateSurfaceConfig {
     f32 seaIceMeltRate;
     f32 seaIceHeatCapacityFactor;
     f32 seaIceEvaporationFactor;
-    f32 iceFeatureCoverageThreshold;
     f32 minTurnResponseFactor;
     f32 maxTurnResponseFactor;
 };
@@ -186,7 +185,6 @@ inline constexpr ClimateSurfaceConfig DEFAULT_SURFACE_CONFIG = {
     0.08f,
     0.11f,
     0.45f,
-    0.95f,
     0.15f,
     0.05f,
     0.65f,

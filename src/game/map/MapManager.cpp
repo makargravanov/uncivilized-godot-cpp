@@ -4,6 +4,7 @@
 
 #include "MapManager.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "game/climate/TemperaturePass.h"
@@ -14,6 +15,14 @@ namespace {
 
 constexpr i32 CUSTOM_DATA_FLOAT_COUNT = 4;
 constexpr f32 BUFFER_COMPARE_EPSILON = 1e-6f;
+
+godot::Color makeTileCustomData(const TileData& tile, const f32 overlayValue) {
+    return godot::Color(
+        static_cast<f32>(tile.biome),
+        std::clamp(tile.cryosphere, 0.0f, 1.0f),
+        static_cast<f32>(tile.features),
+        overlayValue);
+}
 
 void refreshMeshOverlay(LandTypeMeshData& meshData, const ViewMode mode, const OverlayFunc& overlayFunc) {
     if (meshData.material.is_valid() && meshData.lastAppliedViewMode != mode) {
@@ -46,12 +55,7 @@ void refreshMeshBiomeData(
         const f32 overlayValue = (mode != VIEW_NORMAL && overlayFunc)
             ? overlayFunc(tileIndex)
             : 0.0f;
-        meshData.setInstanceCustomData(index,
-            godot::Color(
-                static_cast<f32>(tile.biome),
-                static_cast<f32>(tile.river_edges),
-                static_cast<f32>(tile.features),
-                overlayValue));
+        meshData.setInstanceCustomData(index, makeTileCustomData(tile, overlayValue));
     }
 
     meshData.captureBufferCache();
@@ -211,9 +215,6 @@ void MapManager::unloadChunk(godot::Vector2i chunkPos) {
 void MapManager::loadChunk(godot::Vector2i vec) {
     struct InstanceData {
         godot::Transform3D transform;
-        f32 biomeId;
-        f32 riverEdges;
-        f32 features;
         i32 tileIndex;
     };
     std::map<ReliefType, std::vector<InstanceData>> tilesByRelief;
@@ -234,9 +235,6 @@ void MapManager::loadChunk(godot::Vector2i vec) {
 
                 tilesByRelief[tile.relief].push_back({
                     tileTransform,
-                    static_cast<f32>(tile.biome),
-                    static_cast<f32>(tile.river_edges),
-                    static_cast<f32>(tile.features),
                     tileIndex
                 });
             }
@@ -263,11 +261,8 @@ void MapManager::loadChunk(godot::Vector2i vec) {
                     overlayVal = currentOverlayFunc(instances[i].tileIndex);
                 }
 
-                it->second.setInstanceCustomData(i,
-                    godot::Color(instances[i].biomeId,
-                                 instances[i].riverEdges,
-                                 instances[i].features,
-                                 overlayVal));
+                const TileData& tile = tiles[instances[i].tileIndex];
+                it->second.setInstanceCustomData(i, makeTileCustomData(tile, overlayVal));
                 it->second.tileIndices.push_back(instances[i].tileIndex);
             }
 
@@ -382,4 +377,3 @@ bool MapManager::updateBiomeSnapshot(const ClimateState& climateState) {
 
     return true;
 }
-

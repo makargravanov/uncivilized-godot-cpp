@@ -1,8 +1,6 @@
 #include "SurfacePropertiesPass.h"
 
 #include <algorithm>
-#include <cstring>
-
 #include <cmath>
 
 #include <godot_cpp/core/error_macros.hpp>
@@ -26,14 +24,6 @@ inline void failIfNonFinite(const f32, const char*) {}
 
 bool hasFeature(const FeatureFlags features, const FeatureFlags flag) {
     return (features & flag) != 0;
-}
-
-void setFeature(FeatureFlags& features, const FeatureFlags flag, const bool enabled) {
-    if (enabled) {
-        features |= flag;
-    } else {
-        features &= ~flag;
-    }
 }
 
 bool isOceanTile(const ClimateState& climateState, const u32 index) {
@@ -159,34 +149,6 @@ void recomputeDynamicSurfaceProperties(ClimateState& climateState) {
     }
 }
 
-void initializeCryosphereFromTemperature(ClimateState& climateState) {
-    if (!climateState.temperatureKelvin || !climateState.snowWaterEquivalent ||
-        !climateState.snowCoverFraction || !climateState.seaIceFraction) {
-        return;
-    }
-
-    std::memset(climateState.snowWaterEquivalent.get(), 0, climateState.tileCount * sizeof(f32));
-    std::memset(climateState.snowCoverFraction.get(), 0, climateState.tileCount * sizeof(f32));
-    std::memset(climateState.seaIceFraction.get(), 0, climateState.tileCount * sizeof(f32));
-
-    for (u32 index = 0; index < climateState.tileCount; ++index) {
-        const f32 temperatureCelsius = climateState.temperatureKelvin[index] - CONFIG.shared.kelvinOffset;
-        if (isOceanTile(climateState, index)) {
-            if (temperatureCelsius < CONFIG.surface.seaIceFreezeTemperatureC) {
-                climateState.seaIceFraction[index] = std::clamp(
-                    (CONFIG.surface.seaIceFreezeTemperatureC - temperatureCelsius) / 8.0f,
-                    0.0f,
-                    1.0f);
-            }
-        } else {
-            const f32 initialSnowCover = computeSnowfallFraction(temperatureCelsius);
-            climateState.snowCoverFraction[index] = initialSnowCover;
-            climateState.snowWaterEquivalent[index] =
-                initialSnowCover * CONFIG.surface.snowFullCoverWaterEquivalent;
-        }
-    }
-}
-
 void updateCryosphereState(ClimateState& climateState) {
     if (!climateState.temperatureKelvin || !climateState.turnPrecipitation ||
         !climateState.snowWaterEquivalent || !climateState.snowCoverFraction ||
@@ -296,9 +258,11 @@ void SurfacePropertiesPass::publishToTiles(const ClimateState& climateState, Til
     }
 
     for (u32 index = 0; index < climateState.tileCount; ++index) {
-        const bool hasIce = std::max(
+        tiles[index].cryosphere = std::clamp(
+            std::max(
                 climateState.snowCoverFraction[index],
-                climateState.seaIceFraction[index]) >= CONFIG.surface.iceFeatureCoverageThreshold;
-        setFeature(tiles[index].features, Feature::HAS_ICE, hasIce);
+                climateState.seaIceFraction[index]),
+            0.0f,
+            1.0f);
     }
 }
