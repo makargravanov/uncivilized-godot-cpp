@@ -49,6 +49,12 @@ offset_top = 72.0
 offset_right = 560.0
 offset_bottom = 96.0
 
+[node name="ClimateRegulatorLabel" type="Label" parent="CanvasLayer"]
+offset_left = 16.0
+offset_top = 100.0
+offset_right = 720.0
+offset_bottom = 124.0
+
 [node name="TileInfoLabel" type="Label" parent="CanvasLayer"]
 anchors_preset = 3
 anchor_left = 1.0

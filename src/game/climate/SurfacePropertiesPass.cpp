@@ -97,6 +97,18 @@ f32 computeSnowfallFraction(const f32 temperatureCelsius) {
     return std::clamp(normalized, 0.0f, 1.0f);
 }
 
+f32 computeSnowAlbedoBlendWeight(const f32 preSnowAlbedo, const f32 visibleSnowFraction) {
+    const f32 normalizedSnowFraction = std::clamp(visibleSnowFraction, 0.0f, 1.0f);
+    const f32 albedoHeadroom = std::clamp(
+        (CONFIG.surface.iceAlbedo - preSnowAlbedo) / std::max(CONFIG.surface.iceAlbedo, 1e-4f),
+        0.0f,
+        1.0f);
+    const f32 brightnessResponse = std::pow(
+        albedoHeadroom,
+        std::max(CONFIG.surface.snowAlbedoHeadroomExponent, 1e-3f));
+    return normalizedSnowFraction * brightnessResponse;
+}
+
 void recomputeDynamicSurfaceProperties(ClimateState& climateState) {
     if (!climateState.baseSurfaceAlbedo || !climateState.baseHeatCapacity ||
         !climateState.forestCoverFraction || !climateState.snowCoverFraction ||
@@ -129,7 +141,8 @@ void recomputeDynamicSurfaceProperties(ClimateState& climateState) {
                 1.0f - CONFIG.surface.canopySnowMaskStrength * forestCoverFraction,
                 0.0f,
                 1.0f);
-            surfaceAlbedo += (CONFIG.surface.iceAlbedo - surfaceAlbedo) * visibleSnowFraction;
+            const f32 snowBlendWeight = computeSnowAlbedoBlendWeight(surfaceAlbedo, visibleSnowFraction);
+            surfaceAlbedo += (CONFIG.surface.iceAlbedo - surfaceAlbedo) * snowBlendWeight;
         }
         climateState.surfaceAlbedo[index] = std::clamp(surfaceAlbedo, 0.0f, 1.0f);
         failIfNonFinite(climateState.surfaceAlbedo[index],

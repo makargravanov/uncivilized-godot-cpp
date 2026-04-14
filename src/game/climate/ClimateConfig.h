@@ -73,6 +73,12 @@ struct ClimateSurfaceConfig {
     f32 seaIceEvaporationFactor;
     f32 minTurnResponseFactor;
     f32 maxTurnResponseFactor;
+    f32 snowAlbedoHeadroomExponent;
+};
+
+struct ClimateBiomeConfig {
+    u32 forestDegradationPersistenceYears;
+    u32 forestRecoveryPersistenceYears;
 };
 
 struct ClimateWindConfig {
@@ -118,12 +124,23 @@ struct ClimateMoistureConfig {
     f32 precipitationOverlayResponseExponent;
 };
 
+struct ClimateRegulatorConfig {
+    f32 targetGlobalMeanTemperatureC;
+    f32 temperatureErrorGainWm2PerC;
+    f32 temperatureTrendGainWm2PerCPerYear;
+    f32 cryosphereFeedForwardGainWm2PerC;
+    f32 maxInsolationCorrectionWm2;
+    f32 latitudeShapeExponent;
+};
+
 struct ClimateConfig {
     ClimateSharedConfig shared;
     ClimateTemperatureConfig temperature;
     ClimateSurfaceConfig surface;
+    ClimateBiomeConfig biome;
     ClimateWindConfig wind;
     ClimateMoistureConfig moisture;
+    ClimateRegulatorConfig regulator;
 };
 
 inline constexpr ClimateSharedConfig DEFAULT_SHARED_CONFIG = {
@@ -188,6 +205,12 @@ inline constexpr ClimateSurfaceConfig DEFAULT_SURFACE_CONFIG = {
     0.15f,
     0.05f,
     0.65f,
+    2.0f,
+};
+
+inline constexpr ClimateBiomeConfig DEFAULT_BIOME_CONFIG = {
+    2,
+    3,
 };
 
 inline constexpr ClimateWindConfig DEFAULT_WIND_CONFIG = {
@@ -233,12 +256,23 @@ inline constexpr ClimateMoistureConfig DEFAULT_MOISTURE_CONFIG = {
     0.5f,
 };
 
+inline constexpr ClimateRegulatorConfig DEFAULT_REGULATOR_CONFIG = {
+    14.0f,
+    0.55f,
+    10.0f,
+    0.25f,
+    35.0f,
+    1.4f,
+};
+
 inline constexpr ClimateConfig DEFAULT_CLIMATE_CONFIG = {
     DEFAULT_SHARED_CONFIG,
     DEFAULT_TEMPERATURE_CONFIG,
     DEFAULT_SURFACE_CONFIG,
+    DEFAULT_BIOME_CONFIG,
     DEFAULT_WIND_CONFIG,
     DEFAULT_MOISTURE_CONFIG,
+    DEFAULT_REGULATOR_CONFIG,
 };
 
 } // namespace ClimateSettings

@@ -12,6 +12,7 @@
 #include "api-classes/PlayScene.h"
 #include "climate/ClimateState.h"
 #include "climate/ClimateMetricsPass.h"
+#include "climate/ClimateRegulatorPass.h"
 #include "climate/MoisturePass.h"
 #include "climate/SurfacePropertiesPass.h"
 #include "climate/TemperaturePass.h"
@@ -42,6 +43,7 @@ public:
         MoisturePass::initialize(*climateState);
         SurfacePropertiesPass::publishToTiles(*climateState, tiles.get());
         ClimateMetricsPass::initialize(*climateState);
+        ClimateRegulatorPass::initialize(*climateState);
         TemperaturePass::publishToTiles(*climateState, tiles);
         MoisturePass::publishToTiles(*climateState, tiles);
 
@@ -153,6 +155,7 @@ private:
         MoisturePass::advanceOneTurn(state);
         SurfacePropertiesPass::advanceOneTurn(state);
         ClimateMetricsPass::advanceOneTurn(state);
+        ClimateRegulatorPass::advanceOneTurn(state);
     }
 
     static bool updateBiomeSnapshotIfNeeded() {

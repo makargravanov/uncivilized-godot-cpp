@@ -45,6 +45,7 @@ const BIOME_NAMES := {
 @onready var camera: Camera3D = $Camera3D
 @onready var viewModeLabel: Label = $CanvasLayer/ViewModeLabel
 @onready var climateSummaryLabel: Label = $CanvasLayer/ClimateSummaryLabel
+@onready var climateRegulatorLabel: Label = $CanvasLayer/ClimateRegulatorLabel
 @onready var tileInfoLabel: Label = $CanvasLayer/TileInfoLabel
 @onready var turnLabel: Label = $CanvasLayer/TurnLabel
 
@@ -55,6 +56,7 @@ func _ready():
 	_updateLabel(VIEW_NORMAL)
 	_updateTurnLabel()
 	_updateClimateSummaryLabel()
+	_updateClimateRegulatorLabel()
 
 func _unhandled_key_input(event: InputEvent):
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -69,6 +71,7 @@ func _process(_delta: float):
 		playScene.advance_climate_turn()
 	_updateTurnLabel()
 	_updateClimateSummaryLabel()
+	_updateClimateRegulatorLabel()
 
 func _unhandled_input(event: InputEvent):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -190,3 +193,33 @@ func _updateClimateSummaryLabel():
 		parts.append("Δ/год %+.3f°C" % delta_c)
 
 	climateSummaryLabel.text = " | ".join(parts)
+
+func _updateClimateRegulatorLabel():
+	if climateRegulatorLabel == null:
+		return
+
+	var summary: Dictionary = playScene.get_climate_summary()
+	if summary.is_empty():
+		climateRegulatorLabel.text = ""
+		return
+
+	var target_temperature_c: float = float(summary.get("target_global_mean_temperature_c", 14.0))
+	var temperature_error_c: float = float(summary.get("regulator_temperature_error_c", 0.0))
+	var trend_c_per_year: float = float(summary.get("regulator_trend_c_per_year", 0.0))
+	var cryosphere_delta_c: float = float(summary.get("regulator_cryosphere_cooling_delta_c", 0.0))
+	var control_signal_wm2: float = float(summary.get("regulator_control_signal_wm2", 0.0))
+	var row_bias_min_wm2: float = float(summary.get("regulator_row_bias_min_wm2", 0.0))
+	var row_bias_max_wm2: float = float(summary.get("regulator_row_bias_max_wm2", 0.0))
+	var mean_abs_bias_wm2: float = float(summary.get("regulator_row_bias_mean_abs_wm2", 0.0))
+
+	var parts: PackedStringArray = PackedStringArray()
+	parts.append("Regulator")
+	parts.append("target %.1fC" % target_temperature_c)
+	parts.append("err %+.2fC" % temperature_error_c)
+	parts.append("trend %+.3fC/yr" % trend_c_per_year)
+	parts.append("cryo %+.2fC" % cryosphere_delta_c)
+	parts.append("ctrl %+.1fW/m2" % control_signal_wm2)
+	parts.append("row %.1f..%.1fW/m2" % [row_bias_min_wm2, row_bias_max_wm2])
+	parts.append("mean |%.1f|W/m2" % mean_abs_bias_wm2)
+
+	climateRegulatorLabel.text = " | ".join(parts)

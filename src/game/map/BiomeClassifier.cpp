@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "FeatureType.h"
 #include "game/climate/ClimateConfig.h"
@@ -10,6 +11,7 @@
 namespace {
 
 constexpr f32 KELVIN_OFFSET = ClimateSettings::DEFAULT_CLIMATE_CONFIG.shared.kelvinOffset;
+constexpr ClimateSettings::ClimateConfig CONFIG = ClimateSettings::DEFAULT_CLIMATE_CONFIG;
 constexpr f32 CLIMATE_EPSILON = 1e-4f;
 constexpr f32 ALPINE_ANNUAL_MEAN_TEMPERATURE_C = -1.0f;
 constexpr f32 ALPINE_WARMEST_QUARTER_TEMPERATURE_C = 10.0f;
@@ -235,6 +237,36 @@ TileData makeTile(const ReliefType relief, const BiomeType biome) {
     return tile;
 }
 
+void clearPendingBiomeTransition(TileData& tile) {
+    tile.pendingBiome = BIOME_TYPE_COUNT;
+    tile.pendingBiomePersistenceYears = 0;
+}
+
+bool isForestBoundaryTransition(const BiomeType currentBiome, const BiomeType candidateBiome) {
+    return isForestCapableBiome(currentBiome) != isForestCapableBiome(candidateBiome);
+}
+
+u32 getRequiredForestTransitionYears(const BiomeType currentBiome) {
+    return isForestCapableBiome(currentBiome)
+        ? std::max(CONFIG.biome.forestDegradationPersistenceYears, 1u)
+        : std::max(CONFIG.biome.forestRecoveryPersistenceYears, 1u);
+}
+
+bool advancePendingBiomeTransition(TileData& tile, const BiomeType candidateBiome, const u32 requiredYears) {
+    if (requiredYears <= 1) {
+        return true;
+    }
+
+    if (tile.pendingBiome != candidateBiome) {
+        tile.pendingBiome = candidateBiome;
+        tile.pendingBiomePersistenceYears = 1;
+    } else if (tile.pendingBiomePersistenceYears < std::numeric_limits<u16>::max()) {
+        ++tile.pendingBiomePersistenceYears;
+    }
+
+    return tile.pendingBiomePersistenceYears >= requiredYears;
+}
+
 } // namespace
 
 std::unique_ptr<TileData[]> BiomeClassifier::classify(
@@ -294,6 +326,7 @@ bool BiomeClassifier::classifyFromClimate(
     for (u32 index = 0; index < total; ++index) {
         TileData& tile = tiles[index];
         if (isWaterBiome(tile.biome)) {
+            clearPendingBiomeTransition(tile);
             continue;
         }
 
@@ -305,11 +338,27 @@ bool BiomeClassifier::classifyFromClimate(
             climateState.completedDriestQuarterPrecipitation[index],
             climateState.completedWettestQuarterPrecipitation[index],
         };
-        const BiomeType biome = classifyClimateLandBiome(tile.relief, climate);
-        const FeatureFlags updatedFeatures = updateBiomeFeatures(tile.features, biome);
+        const BiomeType currentBiome = tile.biome;
+        const BiomeType candidateBiome = classifyClimateLandBiome(tile.relief, climate);
+        BiomeType resolvedBiome = currentBiome;
 
-        if (tile.biome != biome || tile.features != updatedFeatures) {
-            tile.biome = biome;
+        if (candidateBiome == currentBiome) {
+            clearPendingBiomeTransition(tile);
+        } else if (isForestBoundaryTransition(currentBiome, candidateBiome)) {
+            const u32 requiredYears = getRequiredForestTransitionYears(currentBiome);
+            if (advancePendingBiomeTransition(tile, candidateBiome, requiredYears)) {
+                resolvedBiome = candidateBiome;
+                clearPendingBiomeTransition(tile);
+            }
+        } else {
+            resolvedBiome = candidateBiome;
+            clearPendingBiomeTransition(tile);
+        }
+
+        const FeatureFlags updatedFeatures = updateBiomeFeatures(tile.features, resolvedBiome);
+
+        if (tile.biome != resolvedBiome || tile.features != updatedFeatures) {
+            tile.biome = resolvedBiome;
             tile.features = updatedFeatures;
             anyChanged = true;
         }

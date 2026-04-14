@@ -182,6 +182,7 @@ godot::Dictionary PlayScene::get_climate_summary() const {
     }
 
     result["climate_years_completed"] = static_cast<int>(climateState->completedClimateYears);
+    result["target_global_mean_temperature_c"] = climateState->currentYearRegulatorTargetTemperatureC;
     result["current_year_mean_temperature_k"] = climateState->currentYearGlobalMeanTemperatureKelvin;
     result["current_year_mean_temperature_c"] =
         climateState->currentYearGlobalMeanTemperatureKelvin - KELVIN_OFFSET;
@@ -193,6 +194,13 @@ godot::Dictionary PlayScene::get_climate_summary() const {
         climateState->currentYearGlobalCryosphereCoolingDeltaKelvin;
     result["current_year_mean_surface_albedo"] = climateState->currentYearGlobalMeanSurfaceAlbedo;
     result["current_year_mean_cryosphere_fraction"] = climateState->currentYearGlobalCryosphereFraction;
+    result["regulator_temperature_error_c"] = climateState->currentYearRegulatorTemperatureErrorC;
+    result["regulator_trend_c_per_year"] = climateState->currentYearRegulatorTrendCPerYear;
+    result["regulator_cryosphere_cooling_delta_c"] = climateState->currentYearRegulatorCryosphereCoolingDeltaC;
+    result["regulator_control_signal_wm2"] = climateState->currentYearRegulatorControlSignalWm2;
+    result["regulator_row_bias_min_wm2"] = climateState->currentYearRegulatorRowBiasMinWm2;
+    result["regulator_row_bias_max_wm2"] = climateState->currentYearRegulatorRowBiasMaxWm2;
+    result["regulator_row_bias_mean_abs_wm2"] = climateState->currentYearRegulatorRowBiasMeanAbsWm2;
     result["completed_year_mean_temperature_k"] = climateState->completedGlobalMeanTemperatureKelvin;
     result["completed_year_mean_temperature_c"] =
         climateState->completedGlobalMeanTemperatureKelvin - KELVIN_OFFSET;

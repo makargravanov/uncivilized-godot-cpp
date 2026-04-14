@@ -105,6 +105,15 @@ public:
     f32 currentYearGlobalCryosphereCoolingDeltaKelvin = 0.0f;
     f32 currentYearGlobalMeanSurfaceAlbedo = 0.0f;
     f32 currentYearGlobalCryosphereFraction = 0.0f;
+    f32 currentYearRegulatorTargetTemperatureC = 0.0f;
+    f32 currentYearRegulatorTemperatureErrorC = 0.0f;
+    f32 currentYearRegulatorTrendCPerYear = 0.0f;
+    f32 currentYearRegulatorCryosphereCoolingDeltaC = 0.0f;
+    f32 currentYearRegulatorControlSignalWm2 = 0.0f;
+    f32 currentYearRegulatorRowBiasMinWm2 = 0.0f;
+    f32 currentYearRegulatorRowBiasMaxWm2 = 0.0f;
+    f32 currentYearRegulatorRowBiasMeanAbsWm2 = 0.0f;
+    std::unique_ptr<f32[]> currentYearRegulatorInsolationBiasWm2ByRow;
     f32 completedGlobalMeanTemperatureKelvin = 0.0f;
     f32 completedGlobalMeanTemperatureDeltaKelvin = 0.0f;
     f32 completedGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
@@ -172,7 +181,8 @@ public:
           relativeAltitude(std::make_unique<f32[]>(tileCount)),
           zonalCellWidthMetersByRow(std::make_unique<f32[]>(height)),
           inverseZonalCellWidthByRow(std::make_unique<f32[]>(height)),
-          inverseZonalDistanceSquaredByRow(std::make_unique<f32[]>(height)) {}
+          inverseZonalDistanceSquaredByRow(std::make_unique<f32[]>(height)),
+          currentYearRegulatorInsolationBiasWm2ByRow(std::make_unique<f32[]>(height)) {}
 
     ClimateState(const ClimateState& other)
         : gridWidth(other.gridWidth),
@@ -225,11 +235,22 @@ public:
            completedDriestQuarterPrecipitation(copyBuffer(other.completedDriestQuarterPrecipitation, other.tileCount)),
            completedWettestQuarterPrecipitation(copyBuffer(other.completedWettestQuarterPrecipitation, other.tileCount)),
             currentYearGlobalMeanTemperatureKelvin(other.currentYearGlobalMeanTemperatureKelvin),
-            currentYearGlobalIceFreeEquilibriumTemperatureKelvin(
+           currentYearGlobalIceFreeEquilibriumTemperatureKelvin(
                 other.currentYearGlobalIceFreeEquilibriumTemperatureKelvin),
             currentYearGlobalCryosphereCoolingDeltaKelvin(other.currentYearGlobalCryosphereCoolingDeltaKelvin),
             currentYearGlobalMeanSurfaceAlbedo(other.currentYearGlobalMeanSurfaceAlbedo),
             currentYearGlobalCryosphereFraction(other.currentYearGlobalCryosphereFraction),
+            currentYearRegulatorTargetTemperatureC(other.currentYearRegulatorTargetTemperatureC),
+            currentYearRegulatorTemperatureErrorC(other.currentYearRegulatorTemperatureErrorC),
+            currentYearRegulatorTrendCPerYear(other.currentYearRegulatorTrendCPerYear),
+            currentYearRegulatorCryosphereCoolingDeltaC(other.currentYearRegulatorCryosphereCoolingDeltaC),
+            currentYearRegulatorControlSignalWm2(other.currentYearRegulatorControlSignalWm2),
+            currentYearRegulatorRowBiasMinWm2(other.currentYearRegulatorRowBiasMinWm2),
+            currentYearRegulatorRowBiasMaxWm2(other.currentYearRegulatorRowBiasMaxWm2),
+            currentYearRegulatorRowBiasMeanAbsWm2(other.currentYearRegulatorRowBiasMeanAbsWm2),
+            currentYearRegulatorInsolationBiasWm2ByRow(copyBuffer(
+                other.currentYearRegulatorInsolationBiasWm2ByRow,
+                other.gridHeight)),
             completedGlobalMeanTemperatureKelvin(other.completedGlobalMeanTemperatureKelvin),
             completedGlobalMeanTemperatureDeltaKelvin(other.completedGlobalMeanTemperatureDeltaKelvin),
             completedGlobalIceFreeEquilibriumTemperatureKelvin(
@@ -313,6 +334,17 @@ public:
         currentYearGlobalCryosphereCoolingDeltaKelvin = other.currentYearGlobalCryosphereCoolingDeltaKelvin;
         currentYearGlobalMeanSurfaceAlbedo = other.currentYearGlobalMeanSurfaceAlbedo;
         currentYearGlobalCryosphereFraction = other.currentYearGlobalCryosphereFraction;
+        currentYearRegulatorTargetTemperatureC = other.currentYearRegulatorTargetTemperatureC;
+        currentYearRegulatorTemperatureErrorC = other.currentYearRegulatorTemperatureErrorC;
+        currentYearRegulatorTrendCPerYear = other.currentYearRegulatorTrendCPerYear;
+        currentYearRegulatorCryosphereCoolingDeltaC = other.currentYearRegulatorCryosphereCoolingDeltaC;
+        currentYearRegulatorControlSignalWm2 = other.currentYearRegulatorControlSignalWm2;
+        currentYearRegulatorRowBiasMinWm2 = other.currentYearRegulatorRowBiasMinWm2;
+        currentYearRegulatorRowBiasMaxWm2 = other.currentYearRegulatorRowBiasMaxWm2;
+        currentYearRegulatorRowBiasMeanAbsWm2 = other.currentYearRegulatorRowBiasMeanAbsWm2;
+        currentYearRegulatorInsolationBiasWm2ByRow = copyBuffer(
+            other.currentYearRegulatorInsolationBiasWm2ByRow,
+            other.gridHeight);
         completedGlobalMeanTemperatureKelvin = other.completedGlobalMeanTemperatureKelvin;
         completedGlobalMeanTemperatureDeltaKelvin = other.completedGlobalMeanTemperatureDeltaKelvin;
         completedGlobalIceFreeEquilibriumTemperatureKelvin =
