@@ -50,11 +50,11 @@ f32 calculateCurrentTurnInsolationForRow(const ClimateState& climateState, const
     const u32 turnIndex = climateState.currentTurnIndex % climateState.annualTurnCount;
     const f32 baseInsolation =
         climateState.insolationByTurnRow[turnIndex * climateState.gridHeight + row];
-    if (!climateState.regulatorCorrectionEnabled) {
+    if (!climateState.regulatorConfig.correctionEnabled) {
         return baseInsolation;
     }
 
-    return std::max(baseInsolation + climateState.currentYearRegulatorControlSignalWm2, 0.0f);
+    return std::max(baseInsolation + climateState.regulatorConfig.insolation.output, 0.0f);
 }
 
 f32 calculateIceFreeEquilibriumTemperatureKelvin(
@@ -62,7 +62,9 @@ f32 calculateIceFreeEquilibriumTemperatureKelvin(
     const u32 index,
     const f32 annualMeanInsolation) {
     const f32 transmissivity = std::clamp(CONFIG.temperature.atmosphericTransmissivity, 0.0f, 1.0f);
-    const f32 albedo = std::clamp(climateState.baseSurfaceAlbedo[index], 0.0f, 1.0f);
+    const f32 baseAlbedoBias =
+        climateState.regulatorConfig.correctionEnabled ? climateState.regulatorConfig.baseAlbedo.output : 0.0f;
+    const f32 albedo = std::clamp(climateState.baseSurfaceAlbedo[index] + baseAlbedoBias, 0.0f, 1.0f);
     const f32 absorbedShortwave = annualMeanInsolation * transmissivity * (1.0f - albedo);
     const f32 altitudeCoolingK = climateState.relativeAltitude
         ? climateState.relativeAltitude[index] * CONFIG.temperature.maxAltitudeCoolingK
@@ -128,30 +130,30 @@ GlobalClimateAverages calculateGlobalClimateAverages(const ClimateState& climate
 void publishGlobalClimateAverages(ClimateState& climateState) {
     const GlobalClimateAverages averages = calculateGlobalClimateAverages(climateState);
     if (!averages.valid) {
-        climateState.currentYearGlobalMeanTemperatureKelvin = 0.0f;
-        climateState.currentYearGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
-        climateState.currentYearGlobalCryosphereCoolingDeltaKelvin = 0.0f;
-        climateState.currentYearGlobalMeanSurfaceAlbedo = 0.0f;
-        climateState.currentYearGlobalCryosphereFraction = 0.0f;
+        climateState.currentTurnGlobalMeanTemperatureKelvin = 0.0f;
+        climateState.currentTurnGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
+        climateState.currentTurnGlobalCryosphereCoolingDeltaKelvin = 0.0f;
+        climateState.currentTurnGlobalMeanSurfaceAlbedo = 0.0f;
+        climateState.currentTurnGlobalCryosphereFraction = 0.0f;
         return;
     }
 
-    climateState.currentYearGlobalMeanTemperatureKelvin = averages.meanTemperatureKelvin;
-    climateState.currentYearGlobalIceFreeEquilibriumTemperatureKelvin =
+    climateState.currentTurnGlobalMeanTemperatureKelvin = averages.meanTemperatureKelvin;
+    climateState.currentTurnGlobalIceFreeEquilibriumTemperatureKelvin =
         averages.iceFreeEquilibriumTemperatureKelvin;
-    climateState.currentYearGlobalCryosphereCoolingDeltaKelvin = averages.cryosphereCoolingDeltaKelvin;
-    climateState.currentYearGlobalMeanSurfaceAlbedo = averages.meanSurfaceAlbedo;
-    climateState.currentYearGlobalCryosphereFraction = averages.meanCryosphereFraction;
+    climateState.currentTurnGlobalCryosphereCoolingDeltaKelvin = averages.cryosphereCoolingDeltaKelvin;
+    climateState.currentTurnGlobalMeanSurfaceAlbedo = averages.meanSurfaceAlbedo;
+    climateState.currentTurnGlobalCryosphereFraction = averages.meanCryosphereFraction;
 }
 
 void resetCurrentYearMetrics(ClimateState& climateState) {
     climateState.currentYearTurnSamples = 0;
     climateState.currentQuarterTurnSamples.fill(0);
-    climateState.currentYearGlobalMeanTemperatureKelvin = 0.0f;
-    climateState.currentYearGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
-    climateState.currentYearGlobalCryosphereCoolingDeltaKelvin = 0.0f;
-    climateState.currentYearGlobalMeanSurfaceAlbedo = 0.0f;
-    climateState.currentYearGlobalCryosphereFraction = 0.0f;
+    climateState.currentTurnGlobalMeanTemperatureKelvin = 0.0f;
+    climateState.currentTurnGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
+    climateState.currentTurnGlobalCryosphereCoolingDeltaKelvin = 0.0f;
+    climateState.currentTurnGlobalMeanSurfaceAlbedo = 0.0f;
+    climateState.currentTurnGlobalCryosphereFraction = 0.0f;
 
     clearBuffer(climateState.annualPrecipitationAccumulator, climateState.tileCount);
     clearBuffer(climateState.currentYearTemperatureSumKelvin, climateState.tileCount);
@@ -248,13 +250,13 @@ void finalizeCompletedYearMetrics(ClimateState& climateState) {
     }
 
     const f32 previousCompletedMeanTemperatureKelvin = climateState.completedGlobalMeanTemperatureKelvin;
-    climateState.completedGlobalMeanTemperatureKelvin = climateState.currentYearGlobalMeanTemperatureKelvin;
+    climateState.completedGlobalMeanTemperatureKelvin = climateState.currentTurnGlobalMeanTemperatureKelvin;
     climateState.completedGlobalIceFreeEquilibriumTemperatureKelvin =
-        climateState.currentYearGlobalIceFreeEquilibriumTemperatureKelvin;
+        climateState.currentTurnGlobalIceFreeEquilibriumTemperatureKelvin;
     climateState.completedGlobalCryosphereCoolingDeltaKelvin =
-        climateState.currentYearGlobalCryosphereCoolingDeltaKelvin;
-    climateState.completedGlobalMeanSurfaceAlbedo = climateState.currentYearGlobalMeanSurfaceAlbedo;
-    climateState.completedGlobalCryosphereFraction = climateState.currentYearGlobalCryosphereFraction;
+        climateState.currentTurnGlobalCryosphereCoolingDeltaKelvin;
+    climateState.completedGlobalMeanSurfaceAlbedo = climateState.currentTurnGlobalMeanSurfaceAlbedo;
+    climateState.completedGlobalCryosphereFraction = climateState.currentTurnGlobalCryosphereFraction;
     climateState.completedGlobalMeanTemperatureDeltaKelvin = climateState.completedClimateYears > 0
         ? climateState.completedGlobalMeanTemperatureKelvin - previousCompletedMeanTemperatureKelvin
         : 0.0f;

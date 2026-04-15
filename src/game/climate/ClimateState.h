@@ -13,6 +13,37 @@
 
 constexpr u32 CLIMATE_QUARTER_COUNT = 4;
 
+struct ClimateRegulatorActuatorRuntime {
+    bool enabled = false;
+    f32 strength = 1.0f;
+    f32 maxMagnitude = 0.0f;
+    f32 output = 0.0f;
+};
+
+struct ClimateRegulatorAdaptiveGainRuntime {
+    f32 kp = 0.0f;
+    f32 kd = 0.0f;
+    f32 kff = 0.0f;
+};
+
+struct ClimateRegulatorRuntimeConfig {
+    bool correctionEnabled = false;
+    f32 targetGlobalMeanTemperatureC = 14.0f;
+    ClimateRegulatorActuatorRuntime insolation;
+    ClimateRegulatorActuatorRuntime cryosphereAlbedo;
+    ClimateRegulatorActuatorRuntime baseAlbedo;
+};
+
+struct ClimateRegulatorTelemetry {
+    f32 controllerMeanTemperatureKelvin = 0.0f;
+    f32 controllerTrendCPerYear = 0.0f;
+    f32 controllerCryosphereCoolingDeltaKelvin = 0.0f;
+    f32 temperatureErrorC = 0.0f;
+    f32 heatingDemandNormalized = 0.0f;
+    f32 heatingDemandEquivalentWm2 = 0.0f;
+    ClimateRegulatorAdaptiveGainRuntime gains;
+};
+
 struct ClimateState {
 private:
     template <typename T>
@@ -82,6 +113,9 @@ public:
     std::unique_ptr<f32[]> forestCoverFraction;
     std::unique_ptr<f32[]> baseSurfaceAlbedo;
     std::unique_ptr<f32[]> baseHeatCapacity;
+    std::unique_ptr<f32[]> landWaterStorageKgPerM2;
+    std::unique_ptr<f32[]> landWaterStorageCapacityKgPerM2;
+    std::unique_ptr<f32[]> landWaterInfiltrationFraction;
     std::unique_ptr<f32[]> snowWaterEquivalent;
     std::unique_ptr<f32[]> snowCoverFraction;
     std::unique_ptr<f32[]> seaIceFraction;
@@ -100,24 +134,35 @@ public:
     std::unique_ptr<f32[]> completedWarmestQuarterMeanTemperatureKelvin;
     std::unique_ptr<f32[]> completedDriestQuarterPrecipitation;
     std::unique_ptr<f32[]> completedWettestQuarterPrecipitation;
-    f32 currentYearGlobalMeanTemperatureKelvin = 0.0f;
-    f32 currentYearGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
-    f32 currentYearGlobalCryosphereCoolingDeltaKelvin = 0.0f;
-    f32 currentYearGlobalMeanSurfaceAlbedo = 0.0f;
-    f32 currentYearGlobalCryosphereFraction = 0.0f;
-    f32 currentYearRegulatorTargetTemperatureC = 0.0f;
-    f32 currentYearRegulatorTemperatureErrorC = 0.0f;
-    f32 currentYearRegulatorTrendCPerYear = 0.0f;
-    f32 currentYearRegulatorCryosphereCoolingDeltaC = 0.0f;
-    f32 currentYearRegulatorControlSignalWm2 = 0.0f;
-    bool regulatorCorrectionEnabled = false;
-    f32 regulatorTargetGlobalMeanTemperatureC = 14.0f;
+
+    // Current-turn global snapshots used for diagnostics and controller history updates.
+    f32 currentTurnGlobalMeanTemperatureKelvin = 0.0f;
+    f32 currentTurnGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
+    f32 currentTurnGlobalCryosphereCoolingDeltaKelvin = 0.0f;
+    f32 currentTurnGlobalMeanSurfaceAlbedo = 0.0f;
+    f32 currentTurnGlobalCryosphereFraction = 0.0f;
+
+    // Completed-year global summaries.
     f32 completedGlobalMeanTemperatureKelvin = 0.0f;
     f32 completedGlobalMeanTemperatureDeltaKelvin = 0.0f;
     f32 completedGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
     f32 completedGlobalCryosphereCoolingDeltaKelvin = 0.0f;
     f32 completedGlobalMeanSurfaceAlbedo = 0.0f;
     f32 completedGlobalCryosphereFraction = 0.0f;
+
+    // Regulator runtime configuration, telemetry, and controller history.
+    ClimateRegulatorRuntimeConfig regulatorConfig;
+    ClimateRegulatorTelemetry regulatorTelemetry;
+    std::unique_ptr<f32[]> regulatorTurnMeanTemperatureHistoryKelvin;
+    std::unique_ptr<f32[]> regulatorTurnCryosphereCoolingDeltaHistoryKelvin;
+    u32 regulatorHistoryCursor = 0;
+    u32 regulatorHistoryCount = 0;
+    f32 regulatorRollingTemperatureSumKelvin = 0.0f;
+    f32 regulatorRollingCryosphereCoolingDeltaSumKelvin = 0.0f;
+    f32 regulatorPreviousControllerMeanTemperatureKelvin = 0.0f;
+    bool regulatorHasPreviousControllerMean = false;
+    f32 regulatorPreviousTemperatureErrorC = 0.0f;
+
     std::unique_ptr<u32[]> moistureUpwindEastIndex;
     std::unique_ptr<u32[]> moistureUpwindNorthIndex;
     std::unique_ptr<f32[]> moistureEastWeight;
@@ -136,14 +181,14 @@ public:
 
     ClimateState() = default;
 
-    ClimateState(u32 width, u32 height)
+    ClimateState(const u32 width, const u32 height)
         : gridWidth(width),
           gridHeight(height),
           tileCount(width * height),
           temperatureKelvin(std::make_unique<f32[]>(tileCount)),
-                    temperatureScratchKelvin(std::make_unique<f32[]>(tileCount)),
-                    windEastMps(std::make_unique<f32[]>(tileCount)),
-                    windNorthMps(std::make_unique<f32[]>(tileCount)),
+          temperatureScratchKelvin(std::make_unique<f32[]>(tileCount)),
+          windEastMps(std::make_unique<f32[]>(tileCount)),
+          windNorthMps(std::make_unique<f32[]>(tileCount)),
           humidityKgPerKg(std::make_unique<f32[]>(tileCount)),
           turnPrecipitation(std::make_unique<f32[]>(tileCount)),
           annualPrecipitationAccumulator(std::make_unique<f32[]>(tileCount)),
@@ -151,6 +196,9 @@ public:
           forestCoverFraction(std::make_unique<f32[]>(tileCount)),
           baseSurfaceAlbedo(std::make_unique<f32[]>(tileCount)),
           baseHeatCapacity(std::make_unique<f32[]>(tileCount)),
+          landWaterStorageKgPerM2(std::make_unique<f32[]>(tileCount)),
+          landWaterStorageCapacityKgPerM2(std::make_unique<f32[]>(tileCount)),
+          landWaterInfiltrationFraction(std::make_unique<f32[]>(tileCount)),
           snowWaterEquivalent(std::make_unique<f32[]>(tileCount)),
           snowCoverFraction(std::make_unique<f32[]>(tileCount)),
           seaIceFraction(std::make_unique<f32[]>(tileCount)),
@@ -173,21 +221,21 @@ public:
           moistureUpwindNorthIndex(std::make_unique<u32[]>(tileCount)),
           moistureEastWeight(std::make_unique<f32[]>(tileCount)),
           moistureNorthWeight(std::make_unique<f32[]>(tileCount)),
-           moistureMixingFactor(std::make_unique<f32[]>(tileCount)),
-           moistureOrographicCoolingK(std::make_unique<f32[]>(tileCount)),
-           latitudeRadians(std::make_unique<f32[]>(tileCount)),
-           relativeAltitude(std::make_unique<f32[]>(tileCount)),
-           zonalCellWidthMetersByRow(std::make_unique<f32[]>(height)),
-           inverseZonalCellWidthByRow(std::make_unique<f32[]>(height)),
-           inverseZonalDistanceSquaredByRow(std::make_unique<f32[]>(height)) {}
+          moistureMixingFactor(std::make_unique<f32[]>(tileCount)),
+          moistureOrographicCoolingK(std::make_unique<f32[]>(tileCount)),
+          latitudeRadians(std::make_unique<f32[]>(tileCount)),
+          relativeAltitude(std::make_unique<f32[]>(tileCount)),
+          zonalCellWidthMetersByRow(std::make_unique<f32[]>(height)),
+          inverseZonalCellWidthByRow(std::make_unique<f32[]>(height)),
+          inverseZonalDistanceSquaredByRow(std::make_unique<f32[]>(height)) {}
 
     ClimateState(const ClimateState& other)
         : gridWidth(other.gridWidth),
           gridHeight(other.gridHeight),
           tileCount(other.tileCount),
-                    meridionalCellHeightMeters(other.meridionalCellHeightMeters),
-                    inverseMeridionalCellHeightMeters(other.inverseMeridionalCellHeightMeters),
-                    inverseMeridionalDistanceSquared(other.inverseMeridionalDistanceSquared),
+          meridionalCellHeightMeters(other.meridionalCellHeightMeters),
+          inverseMeridionalCellHeightMeters(other.inverseMeridionalCellHeightMeters),
+          inverseMeridionalDistanceSquared(other.inverseMeridionalDistanceSquared),
           absoluteTurnIndex(other.absoluteTurnIndex),
           currentTurnIndex(other.currentTurnIndex),
           currentYearFraction(other.currentYearFraction),
@@ -205,6 +253,9 @@ public:
           forestCoverFraction(copyBuffer(other.forestCoverFraction, other.tileCount)),
           baseSurfaceAlbedo(copyBuffer(other.baseSurfaceAlbedo, other.tileCount)),
           baseHeatCapacity(copyBuffer(other.baseHeatCapacity, other.tileCount)),
+          landWaterStorageKgPerM2(copyBuffer(other.landWaterStorageKgPerM2, other.tileCount)),
+          landWaterStorageCapacityKgPerM2(copyBuffer(other.landWaterStorageCapacityKgPerM2, other.tileCount)),
+          landWaterInfiltrationFraction(copyBuffer(other.landWaterInfiltrationFraction, other.tileCount)),
           snowWaterEquivalent(copyBuffer(other.snowWaterEquivalent, other.tileCount)),
           snowCoverFraction(copyBuffer(other.snowCoverFraction, other.tileCount)),
           seaIceFraction(copyBuffer(other.seaIceFraction, other.tileCount)),
@@ -223,35 +274,41 @@ public:
           completedAnnualMeanTemperatureKelvin(copyBuffer(other.completedAnnualMeanTemperatureKelvin, other.tileCount)),
           completedAnnualTemperatureMinKelvin(copyBuffer(other.completedAnnualTemperatureMinKelvin, other.tileCount)),
           completedAnnualTemperatureMaxKelvin(copyBuffer(other.completedAnnualTemperatureMaxKelvin, other.tileCount)),
-           completedColdestQuarterMeanTemperatureKelvin(copyBuffer(
-               other.completedColdestQuarterMeanTemperatureKelvin,
-               other.tileCount)),
-           completedWarmestQuarterMeanTemperatureKelvin(copyBuffer(
-               other.completedWarmestQuarterMeanTemperatureKelvin,
-               other.tileCount)),
-           completedDriestQuarterPrecipitation(copyBuffer(other.completedDriestQuarterPrecipitation, other.tileCount)),
-           completedWettestQuarterPrecipitation(copyBuffer(other.completedWettestQuarterPrecipitation, other.tileCount)),
-            currentYearGlobalMeanTemperatureKelvin(other.currentYearGlobalMeanTemperatureKelvin),
-           currentYearGlobalIceFreeEquilibriumTemperatureKelvin(
-                other.currentYearGlobalIceFreeEquilibriumTemperatureKelvin),
-            currentYearGlobalCryosphereCoolingDeltaKelvin(other.currentYearGlobalCryosphereCoolingDeltaKelvin),
-            currentYearGlobalMeanSurfaceAlbedo(other.currentYearGlobalMeanSurfaceAlbedo),
-            currentYearGlobalCryosphereFraction(other.currentYearGlobalCryosphereFraction),
-             currentYearRegulatorTargetTemperatureC(other.currentYearRegulatorTargetTemperatureC),
-             currentYearRegulatorTemperatureErrorC(other.currentYearRegulatorTemperatureErrorC),
-             currentYearRegulatorTrendCPerYear(other.currentYearRegulatorTrendCPerYear),
-             currentYearRegulatorCryosphereCoolingDeltaC(other.currentYearRegulatorCryosphereCoolingDeltaC),
-             currentYearRegulatorControlSignalWm2(other.currentYearRegulatorControlSignalWm2),
-             regulatorCorrectionEnabled(other.regulatorCorrectionEnabled),
-             regulatorTargetGlobalMeanTemperatureC(other.regulatorTargetGlobalMeanTemperatureC),
-             completedGlobalMeanTemperatureKelvin(other.completedGlobalMeanTemperatureKelvin),
-             completedGlobalMeanTemperatureDeltaKelvin(other.completedGlobalMeanTemperatureDeltaKelvin),
-             completedGlobalIceFreeEquilibriumTemperatureKelvin(
-                 other.completedGlobalIceFreeEquilibriumTemperatureKelvin),
-             completedGlobalCryosphereCoolingDeltaKelvin(other.completedGlobalCryosphereCoolingDeltaKelvin),
-             completedGlobalMeanSurfaceAlbedo(other.completedGlobalMeanSurfaceAlbedo),
-             completedGlobalCryosphereFraction(other.completedGlobalCryosphereFraction),
-            moistureUpwindEastIndex(allocateBuffer<u32>(other.tileCount)),
+          completedColdestQuarterMeanTemperatureKelvin(copyBuffer(
+              other.completedColdestQuarterMeanTemperatureKelvin,
+              other.tileCount)),
+          completedWarmestQuarterMeanTemperatureKelvin(copyBuffer(
+              other.completedWarmestQuarterMeanTemperatureKelvin,
+              other.tileCount)),
+          completedDriestQuarterPrecipitation(copyBuffer(other.completedDriestQuarterPrecipitation, other.tileCount)),
+          completedWettestQuarterPrecipitation(copyBuffer(other.completedWettestQuarterPrecipitation, other.tileCount)),
+          currentTurnGlobalMeanTemperatureKelvin(other.currentTurnGlobalMeanTemperatureKelvin),
+          currentTurnGlobalIceFreeEquilibriumTemperatureKelvin(other.currentTurnGlobalIceFreeEquilibriumTemperatureKelvin),
+          currentTurnGlobalCryosphereCoolingDeltaKelvin(other.currentTurnGlobalCryosphereCoolingDeltaKelvin),
+          currentTurnGlobalMeanSurfaceAlbedo(other.currentTurnGlobalMeanSurfaceAlbedo),
+          currentTurnGlobalCryosphereFraction(other.currentTurnGlobalCryosphereFraction),
+          completedGlobalMeanTemperatureKelvin(other.completedGlobalMeanTemperatureKelvin),
+          completedGlobalMeanTemperatureDeltaKelvin(other.completedGlobalMeanTemperatureDeltaKelvin),
+          completedGlobalIceFreeEquilibriumTemperatureKelvin(other.completedGlobalIceFreeEquilibriumTemperatureKelvin),
+          completedGlobalCryosphereCoolingDeltaKelvin(other.completedGlobalCryosphereCoolingDeltaKelvin),
+          completedGlobalMeanSurfaceAlbedo(other.completedGlobalMeanSurfaceAlbedo),
+          completedGlobalCryosphereFraction(other.completedGlobalCryosphereFraction),
+          regulatorConfig(other.regulatorConfig),
+          regulatorTelemetry(other.regulatorTelemetry),
+          regulatorTurnMeanTemperatureHistoryKelvin(copyBuffer(
+              other.regulatorTurnMeanTemperatureHistoryKelvin,
+              other.annualTurnCount)),
+          regulatorTurnCryosphereCoolingDeltaHistoryKelvin(copyBuffer(
+              other.regulatorTurnCryosphereCoolingDeltaHistoryKelvin,
+              other.annualTurnCount)),
+          regulatorHistoryCursor(other.regulatorHistoryCursor),
+          regulatorHistoryCount(other.regulatorHistoryCount),
+          regulatorRollingTemperatureSumKelvin(other.regulatorRollingTemperatureSumKelvin),
+          regulatorRollingCryosphereCoolingDeltaSumKelvin(other.regulatorRollingCryosphereCoolingDeltaSumKelvin),
+          regulatorPreviousControllerMeanTemperatureKelvin(other.regulatorPreviousControllerMeanTemperatureKelvin),
+          regulatorHasPreviousControllerMean(other.regulatorHasPreviousControllerMean),
+          regulatorPreviousTemperatureErrorC(other.regulatorPreviousTemperatureErrorC),
+          moistureUpwindEastIndex(allocateBuffer<u32>(other.tileCount)),
           moistureUpwindNorthIndex(allocateBuffer<u32>(other.tileCount)),
           moistureEastWeight(allocateBuffer<f32>(other.tileCount)),
           moistureNorthWeight(allocateBuffer<f32>(other.tileCount)),
@@ -263,8 +320,7 @@ public:
           inverseZonalCellWidthByRow(copyBuffer(other.inverseZonalCellWidthByRow, other.gridHeight)),
           inverseZonalDistanceSquaredByRow(copyBuffer(other.inverseZonalDistanceSquaredByRow, other.gridHeight)),
           annualTurnCount(other.annualTurnCount),
-          insolationByTurnRow(copyBuffer(other.insolationByTurnRow,
-              other.annualTurnCount * other.gridHeight)) {}
+          insolationByTurnRow(copyBuffer(other.insolationByTurnRow, other.annualTurnCount * other.gridHeight)) {}
 
     ClimateState& operator=(const ClimateState& other) {
         if (this == &other) {
@@ -295,6 +351,9 @@ public:
         forestCoverFraction = copyBuffer(other.forestCoverFraction, other.tileCount);
         baseSurfaceAlbedo = copyBuffer(other.baseSurfaceAlbedo, other.tileCount);
         baseHeatCapacity = copyBuffer(other.baseHeatCapacity, other.tileCount);
+        landWaterStorageKgPerM2 = copyBuffer(other.landWaterStorageKgPerM2, other.tileCount);
+        landWaterStorageCapacityKgPerM2 = copyBuffer(other.landWaterStorageCapacityKgPerM2, other.tileCount);
+        landWaterInfiltrationFraction = copyBuffer(other.landWaterInfiltrationFraction, other.tileCount);
         snowWaterEquivalent = copyBuffer(other.snowWaterEquivalent, other.tileCount);
         snowCoverFraction = copyBuffer(other.snowCoverFraction, other.tileCount);
         seaIceFraction = copyBuffer(other.seaIceFraction, other.tileCount);
@@ -321,19 +380,14 @@ public:
             other.tileCount);
         completedDriestQuarterPrecipitation = copyBuffer(other.completedDriestQuarterPrecipitation, other.tileCount);
         completedWettestQuarterPrecipitation = copyBuffer(other.completedWettestQuarterPrecipitation, other.tileCount);
-        currentYearGlobalMeanTemperatureKelvin = other.currentYearGlobalMeanTemperatureKelvin;
-        currentYearGlobalIceFreeEquilibriumTemperatureKelvin =
-            other.currentYearGlobalIceFreeEquilibriumTemperatureKelvin;
-        currentYearGlobalCryosphereCoolingDeltaKelvin = other.currentYearGlobalCryosphereCoolingDeltaKelvin;
-        currentYearGlobalMeanSurfaceAlbedo = other.currentYearGlobalMeanSurfaceAlbedo;
-        currentYearGlobalCryosphereFraction = other.currentYearGlobalCryosphereFraction;
-        currentYearRegulatorTargetTemperatureC = other.currentYearRegulatorTargetTemperatureC;
-        currentYearRegulatorTemperatureErrorC = other.currentYearRegulatorTemperatureErrorC;
-        currentYearRegulatorTrendCPerYear = other.currentYearRegulatorTrendCPerYear;
-        currentYearRegulatorCryosphereCoolingDeltaC = other.currentYearRegulatorCryosphereCoolingDeltaC;
-        currentYearRegulatorControlSignalWm2 = other.currentYearRegulatorControlSignalWm2;
-        regulatorCorrectionEnabled = other.regulatorCorrectionEnabled;
-        regulatorTargetGlobalMeanTemperatureC = other.regulatorTargetGlobalMeanTemperatureC;
+
+        currentTurnGlobalMeanTemperatureKelvin = other.currentTurnGlobalMeanTemperatureKelvin;
+        currentTurnGlobalIceFreeEquilibriumTemperatureKelvin =
+            other.currentTurnGlobalIceFreeEquilibriumTemperatureKelvin;
+        currentTurnGlobalCryosphereCoolingDeltaKelvin = other.currentTurnGlobalCryosphereCoolingDeltaKelvin;
+        currentTurnGlobalMeanSurfaceAlbedo = other.currentTurnGlobalMeanSurfaceAlbedo;
+        currentTurnGlobalCryosphereFraction = other.currentTurnGlobalCryosphereFraction;
+
         completedGlobalMeanTemperatureKelvin = other.completedGlobalMeanTemperatureKelvin;
         completedGlobalMeanTemperatureDeltaKelvin = other.completedGlobalMeanTemperatureDeltaKelvin;
         completedGlobalIceFreeEquilibriumTemperatureKelvin =
@@ -341,6 +395,23 @@ public:
         completedGlobalCryosphereCoolingDeltaKelvin = other.completedGlobalCryosphereCoolingDeltaKelvin;
         completedGlobalMeanSurfaceAlbedo = other.completedGlobalMeanSurfaceAlbedo;
         completedGlobalCryosphereFraction = other.completedGlobalCryosphereFraction;
+
+        regulatorConfig = other.regulatorConfig;
+        regulatorTelemetry = other.regulatorTelemetry;
+        regulatorTurnMeanTemperatureHistoryKelvin = copyBuffer(
+            other.regulatorTurnMeanTemperatureHistoryKelvin,
+            other.annualTurnCount);
+        regulatorTurnCryosphereCoolingDeltaHistoryKelvin = copyBuffer(
+            other.regulatorTurnCryosphereCoolingDeltaHistoryKelvin,
+            other.annualTurnCount);
+        regulatorHistoryCursor = other.regulatorHistoryCursor;
+        regulatorHistoryCount = other.regulatorHistoryCount;
+        regulatorRollingTemperatureSumKelvin = other.regulatorRollingTemperatureSumKelvin;
+        regulatorRollingCryosphereCoolingDeltaSumKelvin = other.regulatorRollingCryosphereCoolingDeltaSumKelvin;
+        regulatorPreviousControllerMeanTemperatureKelvin = other.regulatorPreviousControllerMeanTemperatureKelvin;
+        regulatorHasPreviousControllerMean = other.regulatorHasPreviousControllerMean;
+        regulatorPreviousTemperatureErrorC = other.regulatorPreviousTemperatureErrorC;
+
         moistureUpwindEastIndex = allocateBuffer<u32>(other.tileCount);
         moistureUpwindNorthIndex = allocateBuffer<u32>(other.tileCount);
         moistureEastWeight = allocateBuffer<f32>(other.tileCount);
@@ -353,9 +424,7 @@ public:
         inverseZonalCellWidthByRow = copyBuffer(other.inverseZonalCellWidthByRow, other.gridHeight);
         inverseZonalDistanceSquaredByRow = copyBuffer(other.inverseZonalDistanceSquaredByRow, other.gridHeight);
         annualTurnCount = other.annualTurnCount;
-        insolationByTurnRow = copyBuffer(
-            other.insolationByTurnRow,
-            other.annualTurnCount * other.gridHeight);
+        insolationByTurnRow = copyBuffer(other.insolationByTurnRow, other.annualTurnCount * other.gridHeight);
 
         return *this;
     }

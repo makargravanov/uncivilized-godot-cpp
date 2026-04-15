@@ -46,12 +46,44 @@ f32 sampleTemperatureC(const f32* temperatureKelvin, const u32 index) {
     return temperatureKelvin[index] - CONFIG.shared.kelvinOffset;
 }
 
+f32 getInsolationRegulatorOutputWm2(const ClimateState& climateState) {
+    if (!climateState.regulatorConfig.correctionEnabled) {
+        return 0.0f;
+    }
+
+    return climateState.regulatorConfig.insolation.output;
+}
+
 f32 applyRegulatorCorrection(const ClimateState& climateState, const f32 insolationWm2) {
-    if (!climateState.regulatorCorrectionEnabled) {
+    const f32 regulatorOutputWm2 = getInsolationRegulatorOutputWm2(climateState);
+    if (std::abs(regulatorOutputWm2) <= 1e-6f) {
         return insolationWm2;
     }
 
-    return std::max(insolationWm2 + climateState.currentYearRegulatorControlSignalWm2, 0.0f);
+    return std::max(insolationWm2 + regulatorOutputWm2, 0.0f);
+}
+
+void initializeRegulatorRuntimeDefaults(ClimateState& climateState) {
+    climateState.regulatorConfig.correctionEnabled = false;
+    climateState.regulatorConfig.targetGlobalMeanTemperatureC = CONFIG.regulator.targetGlobalMeanTemperatureC;
+    climateState.regulatorConfig.insolation.enabled = CONFIG.regulator.defaultInsolationEnabled;
+    climateState.regulatorConfig.insolation.strength = CONFIG.regulator.defaultInsolationStrength;
+    climateState.regulatorConfig.insolation.maxMagnitude = CONFIG.regulator.defaultInsolationMaxMagnitude;
+    climateState.regulatorConfig.insolation.output = 0.0f;
+    climateState.regulatorConfig.cryosphereAlbedo.enabled = CONFIG.regulator.defaultCryosphereAlbedoEnabled;
+    climateState.regulatorConfig.cryosphereAlbedo.strength = CONFIG.regulator.defaultCryosphereAlbedoStrength;
+    climateState.regulatorConfig.cryosphereAlbedo.maxMagnitude = CONFIG.regulator.defaultCryosphereAlbedoMaxMagnitude;
+    climateState.regulatorConfig.cryosphereAlbedo.output = 0.0f;
+    climateState.regulatorConfig.baseAlbedo.enabled = CONFIG.regulator.defaultBaseAlbedoEnabled;
+    climateState.regulatorConfig.baseAlbedo.strength = CONFIG.regulator.defaultBaseAlbedoStrength;
+    climateState.regulatorConfig.baseAlbedo.maxMagnitude = CONFIG.regulator.defaultBaseAlbedoMaxMagnitude;
+    climateState.regulatorConfig.baseAlbedo.output = 0.0f;
+
+    climateState.regulatorTelemetry.gains.kp = CONFIG.regulator.baseProportionalGain;
+    climateState.regulatorTelemetry.gains.kd = CONFIG.regulator.baseDifferentialGain;
+    climateState.regulatorTelemetry.gains.kff = CONFIG.regulator.baseFeedForwardGain;
+    climateState.regulatorTelemetry.heatingDemandNormalized = 0.0f;
+    climateState.regulatorTelemetry.heatingDemandEquivalentWm2 = 0.0f;
 }
 
 #if defined(DEBUG_ENABLED)
@@ -544,6 +576,16 @@ ClimateState TemperaturePass::createInitialState(const MapResult& mapResult) {
     climateState.annualTurnCount = Astro::DEFAULT_YEAR_TURN_COUNT;
     climateState.insolationByTurnRow =
         std::make_unique<f32[]>(climateState.annualTurnCount * height);
+    climateState.regulatorTurnMeanTemperatureHistoryKelvin =
+        std::make_unique<f32[]>(climateState.annualTurnCount);
+    climateState.regulatorTurnCryosphereCoolingDeltaHistoryKelvin =
+        std::make_unique<f32[]>(climateState.annualTurnCount);
+    std::fill_n(climateState.regulatorTurnMeanTemperatureHistoryKelvin.get(), climateState.annualTurnCount, 0.0f);
+    std::fill_n(
+        climateState.regulatorTurnCryosphereCoolingDeltaHistoryKelvin.get(),
+        climateState.annualTurnCount,
+        0.0f);
+    initializeRegulatorRuntimeDefaults(climateState);
     precomputeTransportGeometry(climateState);
     precomputeInsolationLookup(climateState);
 

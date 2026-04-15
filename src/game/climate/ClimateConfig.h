@@ -55,6 +55,9 @@ struct ClimateSurfaceConfig {
     f32 mountainHeatCapacity;
     f32 forestCanopyAlbedo;
     f32 forestHeatCapacityBonus;
+    f32 landSoilWaterCapacityKgPerM2;
+    f32 forestSoilWaterCapacityBonus;
+    f32 forestWaterInfiltrationBonus;
     f32 clearedLandAlbedoBoost;
     f32 iceAlbedo;
     f32 iceHeatCapacityBonus;
@@ -109,6 +112,7 @@ struct ClimateMoistureConfig {
     f32 oceanEvaporationRate;
     f32 oceanInitialHumidityFraction;
     f32 landInitialHumidityFraction;
+    f32 landInitialSoilWaterFraction;
     u32 advectionSubSteps;
     f32 advectionMixingFraction;
     f32 referenceAdvectionWindSpeedMps;
@@ -117,6 +121,10 @@ struct ClimateMoistureConfig {
     f32 maxOrographicLiftCoolingK;
     f32 orographicPrecipitationEfficiency;
     f32 oceanEvaporationWindFactor;
+    f32 landEvapotranspirationRate;
+    f32 landEvapotranspirationHumidityExponent;
+    f32 landWaterToHumidityScaleKgPerM2;
+    f32 forestEvapotranspirationMultiplier;
     f32 minOverlayHumidity;
     f32 maxOverlayHumidity;
     f32 minOverlayTurnPrecipitation;
@@ -126,10 +134,35 @@ struct ClimateMoistureConfig {
 
 struct ClimateRegulatorConfig {
     f32 targetGlobalMeanTemperatureC;
-    f32 temperatureErrorGainWm2PerC;
-    f32 temperatureTrendGainWm2PerCPerYear;
-    f32 cryosphereFeedForwardGainWm2PerC;
-    f32 maxInsolationCorrectionWm2;
+    f32 demandReferenceWm2;
+    f32 demandSlewPerTurn;
+    f32 errorReferenceC;
+    f32 trendReferenceCPerYear;
+    f32 cryosphereReferenceC;
+    f32 baseProportionalGain;
+    f32 minProportionalGain;
+    f32 maxProportionalGain;
+    f32 proportionalGainAdaptationRate;
+    f32 baseDifferentialGain;
+    f32 minDifferentialGain;
+    f32 maxDifferentialGain;
+    f32 differentialGainAdaptationRate;
+    f32 baseFeedForwardGain;
+    f32 minFeedForwardGain;
+    f32 maxFeedForwardGain;
+    f32 feedForwardGainAdaptationRate;
+    bool defaultInsolationEnabled;
+    f32 defaultInsolationStrength;
+    f32 defaultInsolationMaxMagnitude;
+    f32 insolationOutputSlewPerTurn;
+    bool defaultCryosphereAlbedoEnabled;
+    f32 defaultCryosphereAlbedoStrength;
+    f32 defaultCryosphereAlbedoMaxMagnitude;
+    f32 cryosphereAlbedoOutputSlewPerTurn;
+    bool defaultBaseAlbedoEnabled;
+    f32 defaultBaseAlbedoStrength;
+    f32 defaultBaseAlbedoMaxMagnitude;
+    f32 baseAlbedoOutputSlewPerTurn;
 };
 
 struct ClimateConfig {
@@ -187,6 +220,9 @@ inline constexpr ClimateSurfaceConfig DEFAULT_SURFACE_CONFIG = {
     0.12f,
     0.22f,
     0.03f,
+    120.0f,
+    0.35f,
+    0.30f,
     0.55f,
     0.10f,
     0.018f,
@@ -240,6 +276,7 @@ inline constexpr ClimateMoistureConfig DEFAULT_MOISTURE_CONFIG = {
     0.015f,
     0.80f,
     0.20f,
+    0.18f,
     12,
     0.25f,
     8.0f,
@@ -248,6 +285,10 @@ inline constexpr ClimateMoistureConfig DEFAULT_MOISTURE_CONFIG = {
     7.5f,
     0.65f,
     1.0f,
+    0.010f,
+    1.20f,
+    25.0f,
+    0.35f,
     0.0f,
     0.025f,
     0.0f,
@@ -257,10 +298,35 @@ inline constexpr ClimateMoistureConfig DEFAULT_MOISTURE_CONFIG = {
 
 inline constexpr ClimateRegulatorConfig DEFAULT_REGULATOR_CONFIG = {
     14.0f,
-    0.55f,
-    1.0f,
-    0.25f,
     35.0f,
+    0.10f,
+    20.0f,
+    3.5f,
+    20.0f,
+    0.80f,
+    0.18f,
+    1.40f,
+    0.12f,
+    0.24f,
+    0.04f,
+    0.70f,
+    0.10f,
+    0.70f,
+    0.08f,
+    1.20f,
+    0.08f,
+    true,
+    0.70f,
+    35.0f,
+    2.5f,
+    true,
+    0.85f,
+    1.0f,
+    0.10f,
+    false,
+    0.40f,
+    0.12f,
+    0.01f,
 };
 
 inline constexpr ClimateConfig DEFAULT_CLIMATE_CONFIG = {

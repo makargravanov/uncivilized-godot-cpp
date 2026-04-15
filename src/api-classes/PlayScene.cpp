@@ -79,6 +79,60 @@ void PlayScene::_bind_methods() {
     godot::ClassDB::bind_method(
         godot::D_METHOD("get_climate_regulator_target_temperature_c"),
         &PlayScene::get_climate_regulator_target_temperature_c);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_insolation_enabled", "enabled"),
+        &PlayScene::set_climate_regulator_insolation_enabled);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("is_climate_regulator_insolation_enabled"),
+        &PlayScene::is_climate_regulator_insolation_enabled);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_insolation_strength", "strength"),
+        &PlayScene::set_climate_regulator_insolation_strength);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("get_climate_regulator_insolation_strength"),
+        &PlayScene::get_climate_regulator_insolation_strength);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_insolation_max_magnitude", "max_magnitude"),
+        &PlayScene::set_climate_regulator_insolation_max_magnitude);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("get_climate_regulator_insolation_max_magnitude"),
+        &PlayScene::get_climate_regulator_insolation_max_magnitude);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_cryosphere_albedo_enabled", "enabled"),
+        &PlayScene::set_climate_regulator_cryosphere_albedo_enabled);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("is_climate_regulator_cryosphere_albedo_enabled"),
+        &PlayScene::is_climate_regulator_cryosphere_albedo_enabled);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_cryosphere_albedo_strength", "strength"),
+        &PlayScene::set_climate_regulator_cryosphere_albedo_strength);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("get_climate_regulator_cryosphere_albedo_strength"),
+        &PlayScene::get_climate_regulator_cryosphere_albedo_strength);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_cryosphere_albedo_max_magnitude", "max_magnitude"),
+        &PlayScene::set_climate_regulator_cryosphere_albedo_max_magnitude);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("get_climate_regulator_cryosphere_albedo_max_magnitude"),
+        &PlayScene::get_climate_regulator_cryosphere_albedo_max_magnitude);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_base_albedo_enabled", "enabled"),
+        &PlayScene::set_climate_regulator_base_albedo_enabled);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("is_climate_regulator_base_albedo_enabled"),
+        &PlayScene::is_climate_regulator_base_albedo_enabled);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_base_albedo_strength", "strength"),
+        &PlayScene::set_climate_regulator_base_albedo_strength);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("get_climate_regulator_base_albedo_strength"),
+        &PlayScene::get_climate_regulator_base_albedo_strength);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_base_albedo_max_magnitude", "max_magnitude"),
+        &PlayScene::set_climate_regulator_base_albedo_max_magnitude);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("get_climate_regulator_base_albedo_max_magnitude"),
+        &PlayScene::get_climate_regulator_base_albedo_max_magnitude);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_climate_turn"), &PlayScene::advance_climate_turn);
     godot::ClassDB::bind_method(godot::D_METHOD("is_climate_turn_in_progress"), &PlayScene::is_climate_turn_in_progress);
     godot::ClassDB::bind_method(godot::D_METHOD("get_current_turn"), &PlayScene::get_current_turn);
@@ -194,23 +248,43 @@ godot::Dictionary PlayScene::get_climate_summary() const {
     }
 
     result["climate_years_completed"] = static_cast<int>(climateState->completedClimateYears);
-    result["target_global_mean_temperature_c"] = climateState->currentYearRegulatorTargetTemperatureC;
-    result["regulator_correction_enabled"] = climateState->regulatorCorrectionEnabled;
-    result["current_year_mean_temperature_k"] = climateState->currentYearGlobalMeanTemperatureKelvin;
-    result["current_year_mean_temperature_c"] =
-        climateState->currentYearGlobalMeanTemperatureKelvin - KELVIN_OFFSET;
-    result["current_year_ice_free_equilibrium_temperature_k"] =
-        climateState->currentYearGlobalIceFreeEquilibriumTemperatureKelvin;
-    result["current_year_ice_free_equilibrium_temperature_c"] =
-        climateState->currentYearGlobalIceFreeEquilibriumTemperatureKelvin - KELVIN_OFFSET;
-    result["current_year_cryosphere_cooling_delta_c"] =
-        climateState->currentYearGlobalCryosphereCoolingDeltaKelvin;
-    result["current_year_mean_surface_albedo"] = climateState->currentYearGlobalMeanSurfaceAlbedo;
-    result["current_year_mean_cryosphere_fraction"] = climateState->currentYearGlobalCryosphereFraction;
-    result["regulator_temperature_error_c"] = climateState->currentYearRegulatorTemperatureErrorC;
-    result["regulator_trend_c_per_year"] = climateState->currentYearRegulatorTrendCPerYear;
-    result["regulator_cryosphere_cooling_delta_c"] = climateState->currentYearRegulatorCryosphereCoolingDeltaC;
-    result["regulator_control_signal_wm2"] = climateState->currentYearRegulatorControlSignalWm2;
+    result["target_global_mean_temperature_c"] = climateState->regulatorConfig.targetGlobalMeanTemperatureC;
+    result["regulator_correction_enabled"] = climateState->regulatorConfig.correctionEnabled;
+    result["current_turn_mean_temperature_k"] = climateState->currentTurnGlobalMeanTemperatureKelvin;
+    result["current_turn_mean_temperature_c"] =
+        climateState->currentTurnGlobalMeanTemperatureKelvin - KELVIN_OFFSET;
+    result["current_turn_ice_free_equilibrium_temperature_k"] =
+        climateState->currentTurnGlobalIceFreeEquilibriumTemperatureKelvin;
+    result["current_turn_ice_free_equilibrium_temperature_c"] =
+        climateState->currentTurnGlobalIceFreeEquilibriumTemperatureKelvin - KELVIN_OFFSET;
+    result["current_turn_cryosphere_cooling_delta_c"] =
+        climateState->currentTurnGlobalCryosphereCoolingDeltaKelvin;
+    result["current_turn_mean_surface_albedo"] = climateState->currentTurnGlobalMeanSurfaceAlbedo;
+    result["current_turn_mean_cryosphere_fraction"] = climateState->currentTurnGlobalCryosphereFraction;
+    result["controller_mean_temperature_k"] = climateState->regulatorTelemetry.controllerMeanTemperatureKelvin;
+    result["controller_mean_temperature_c"] =
+        climateState->regulatorTelemetry.controllerMeanTemperatureKelvin - KELVIN_OFFSET;
+    result["controller_trend_c_per_year"] = climateState->regulatorTelemetry.controllerTrendCPerYear;
+    result["controller_cryosphere_cooling_delta_c"] =
+        climateState->regulatorTelemetry.controllerCryosphereCoolingDeltaKelvin;
+    result["regulator_temperature_error_c"] = climateState->regulatorTelemetry.temperatureErrorC;
+    result["regulator_heating_demand_normalized"] = climateState->regulatorTelemetry.heatingDemandNormalized;
+    result["regulator_heating_demand_wm2"] = climateState->regulatorTelemetry.heatingDemandEquivalentWm2;
+    result["regulator_effective_kp"] = climateState->regulatorTelemetry.gains.kp;
+    result["regulator_effective_kd"] = climateState->regulatorTelemetry.gains.kd;
+    result["regulator_effective_kff"] = climateState->regulatorTelemetry.gains.kff;
+    result["regulator_insolation_enabled"] = climateState->regulatorConfig.insolation.enabled;
+    result["regulator_insolation_strength"] = climateState->regulatorConfig.insolation.strength;
+    result["regulator_insolation_max_magnitude"] = climateState->regulatorConfig.insolation.maxMagnitude;
+    result["regulator_insolation_output_wm2"] = climateState->regulatorConfig.insolation.output;
+    result["regulator_cryosphere_albedo_enabled"] = climateState->regulatorConfig.cryosphereAlbedo.enabled;
+    result["regulator_cryosphere_albedo_strength"] = climateState->regulatorConfig.cryosphereAlbedo.strength;
+    result["regulator_cryosphere_albedo_max_magnitude"] = climateState->regulatorConfig.cryosphereAlbedo.maxMagnitude;
+    result["regulator_cryosphere_albedo_output"] = climateState->regulatorConfig.cryosphereAlbedo.output;
+    result["regulator_base_albedo_enabled"] = climateState->regulatorConfig.baseAlbedo.enabled;
+    result["regulator_base_albedo_strength"] = climateState->regulatorConfig.baseAlbedo.strength;
+    result["regulator_base_albedo_max_magnitude"] = climateState->regulatorConfig.baseAlbedo.maxMagnitude;
+    result["regulator_base_albedo_output"] = climateState->regulatorConfig.baseAlbedo.output;
     result["completed_year_mean_temperature_k"] = climateState->completedGlobalMeanTemperatureKelvin;
     result["completed_year_mean_temperature_c"] =
         climateState->completedGlobalMeanTemperatureKelvin - KELVIN_OFFSET;
@@ -240,6 +314,78 @@ void PlayScene::set_climate_regulator_target_temperature_c(const float temperatu
 
 float PlayScene::get_climate_regulator_target_temperature_c() const {
     return SystemNexus::climateRegulatorTargetTemperatureCValue();
+}
+
+void PlayScene::set_climate_regulator_insolation_enabled(const bool enabled) {
+    SystemNexus::setClimateRegulatorInsolationEnabled(enabled);
+}
+
+bool PlayScene::is_climate_regulator_insolation_enabled() const {
+    return SystemNexus::isClimateRegulatorInsolationEnabled();
+}
+
+void PlayScene::set_climate_regulator_insolation_strength(const float strength) {
+    SystemNexus::setClimateRegulatorInsolationStrength(strength);
+}
+
+float PlayScene::get_climate_regulator_insolation_strength() const {
+    return SystemNexus::climateRegulatorInsolationStrength();
+}
+
+void PlayScene::set_climate_regulator_insolation_max_magnitude(const float maxMagnitude) {
+    SystemNexus::setClimateRegulatorInsolationMaxMagnitude(maxMagnitude);
+}
+
+float PlayScene::get_climate_regulator_insolation_max_magnitude() const {
+    return SystemNexus::climateRegulatorInsolationMaxMagnitude();
+}
+
+void PlayScene::set_climate_regulator_cryosphere_albedo_enabled(const bool enabled) {
+    SystemNexus::setClimateRegulatorCryosphereAlbedoEnabled(enabled);
+}
+
+bool PlayScene::is_climate_regulator_cryosphere_albedo_enabled() const {
+    return SystemNexus::isClimateRegulatorCryosphereAlbedoEnabled();
+}
+
+void PlayScene::set_climate_regulator_cryosphere_albedo_strength(const float strength) {
+    SystemNexus::setClimateRegulatorCryosphereAlbedoStrength(strength);
+}
+
+float PlayScene::get_climate_regulator_cryosphere_albedo_strength() const {
+    return SystemNexus::climateRegulatorCryosphereAlbedoStrength();
+}
+
+void PlayScene::set_climate_regulator_cryosphere_albedo_max_magnitude(const float maxMagnitude) {
+    SystemNexus::setClimateRegulatorCryosphereAlbedoMaxMagnitude(maxMagnitude);
+}
+
+float PlayScene::get_climate_regulator_cryosphere_albedo_max_magnitude() const {
+    return SystemNexus::climateRegulatorCryosphereAlbedoMaxMagnitude();
+}
+
+void PlayScene::set_climate_regulator_base_albedo_enabled(const bool enabled) {
+    SystemNexus::setClimateRegulatorBaseAlbedoEnabled(enabled);
+}
+
+bool PlayScene::is_climate_regulator_base_albedo_enabled() const {
+    return SystemNexus::isClimateRegulatorBaseAlbedoEnabled();
+}
+
+void PlayScene::set_climate_regulator_base_albedo_strength(const float strength) {
+    SystemNexus::setClimateRegulatorBaseAlbedoStrength(strength);
+}
+
+float PlayScene::get_climate_regulator_base_albedo_strength() const {
+    return SystemNexus::climateRegulatorBaseAlbedoStrength();
+}
+
+void PlayScene::set_climate_regulator_base_albedo_max_magnitude(const float maxMagnitude) {
+    SystemNexus::setClimateRegulatorBaseAlbedoMaxMagnitude(maxMagnitude);
+}
+
+float PlayScene::get_climate_regulator_base_albedo_max_magnitude() const {
+    return SystemNexus::climateRegulatorBaseAlbedoMaxMagnitude();
 }
 
 godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float worldZ) {
@@ -297,6 +443,14 @@ godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float wo
             result["snow_cover_fraction"] = cs->snowCoverFraction[tileIndex];
         if (cs->seaIceFraction)
             result["sea_ice_fraction"] = cs->seaIceFraction[tileIndex];
+        if (cs->landWaterStorageKgPerM2)
+            result["soil_water_storage"] = cs->landWaterStorageKgPerM2[tileIndex];
+        if (cs->landWaterStorageCapacityKgPerM2)
+            result["soil_water_capacity"] = cs->landWaterStorageCapacityKgPerM2[tileIndex];
+        if (cs->landWaterStorageKgPerM2 && cs->snowWaterEquivalent) {
+            result["tile_water_storage_total"] =
+                cs->landWaterStorageKgPerM2[tileIndex] + cs->snowWaterEquivalent[tileIndex];
+        }
         result["climate_years_completed"] = static_cast<int>(cs->completedClimateYears);
         if (cs->completedClimateYears > 0) {
             if (cs->completedAnnualPrecipitation)

@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "api-classes/PlayScene.h"
+#include "climate/ClimateConfig.h"
 #include "climate/ClimateState.h"
 #include "climate/ClimateMetricsPass.h"
 #include "climate/ClimateRegulatorPass.h"
@@ -62,26 +63,124 @@ public:
     }
 
     static void setClimateRegulatorCorrectionEnabled(const bool enabled) {
-        climateRegulatorCorrectionEnabled = enabled;
+        climateRegulatorRuntimeConfig.correctionEnabled = enabled;
         if (climateState) {
-            climateState->regulatorCorrectionEnabled = enabled;
+            climateState->regulatorConfig.correctionEnabled = enabled;
         }
     }
 
     static bool isClimateRegulatorCorrectionEnabled() {
-        return climateRegulatorCorrectionEnabled;
+        return climateRegulatorRuntimeConfig.correctionEnabled;
     }
 
     static void setClimateRegulatorTargetTemperatureC(const f32 temperatureC) {
-        climateRegulatorTargetTemperatureC = temperatureC;
+        climateRegulatorRuntimeConfig.targetGlobalMeanTemperatureC = temperatureC;
         if (climateState) {
-            climateState->regulatorTargetGlobalMeanTemperatureC = temperatureC;
-            climateState->currentYearRegulatorTargetTemperatureC = temperatureC;
+            climateState->regulatorConfig.targetGlobalMeanTemperatureC = temperatureC;
         }
     }
 
     static f32 climateRegulatorTargetTemperatureCValue() {
-        return climateRegulatorTargetTemperatureC;
+        return climateRegulatorRuntimeConfig.targetGlobalMeanTemperatureC;
+    }
+
+    static void setClimateRegulatorInsolationEnabled(const bool enabled) {
+        climateRegulatorRuntimeConfig.insolation.enabled = enabled;
+        if (climateState) {
+            climateState->regulatorConfig.insolation.enabled = enabled;
+        }
+    }
+
+    static bool isClimateRegulatorInsolationEnabled() {
+        return climateRegulatorRuntimeConfig.insolation.enabled;
+    }
+
+    static void setClimateRegulatorInsolationStrength(const f32 strength) {
+        climateRegulatorRuntimeConfig.insolation.strength = strength;
+        if (climateState) {
+            climateState->regulatorConfig.insolation.strength = strength;
+        }
+    }
+
+    static f32 climateRegulatorInsolationStrength() {
+        return climateRegulatorRuntimeConfig.insolation.strength;
+    }
+
+    static void setClimateRegulatorInsolationMaxMagnitude(const f32 maxMagnitude) {
+        climateRegulatorRuntimeConfig.insolation.maxMagnitude = maxMagnitude;
+        if (climateState) {
+            climateState->regulatorConfig.insolation.maxMagnitude = maxMagnitude;
+        }
+    }
+
+    static f32 climateRegulatorInsolationMaxMagnitude() {
+        return climateRegulatorRuntimeConfig.insolation.maxMagnitude;
+    }
+
+    static void setClimateRegulatorCryosphereAlbedoEnabled(const bool enabled) {
+        climateRegulatorRuntimeConfig.cryosphereAlbedo.enabled = enabled;
+        if (climateState) {
+            climateState->regulatorConfig.cryosphereAlbedo.enabled = enabled;
+        }
+    }
+
+    static bool isClimateRegulatorCryosphereAlbedoEnabled() {
+        return climateRegulatorRuntimeConfig.cryosphereAlbedo.enabled;
+    }
+
+    static void setClimateRegulatorCryosphereAlbedoStrength(const f32 strength) {
+        climateRegulatorRuntimeConfig.cryosphereAlbedo.strength = strength;
+        if (climateState) {
+            climateState->regulatorConfig.cryosphereAlbedo.strength = strength;
+        }
+    }
+
+    static f32 climateRegulatorCryosphereAlbedoStrength() {
+        return climateRegulatorRuntimeConfig.cryosphereAlbedo.strength;
+    }
+
+    static void setClimateRegulatorCryosphereAlbedoMaxMagnitude(const f32 maxMagnitude) {
+        climateRegulatorRuntimeConfig.cryosphereAlbedo.maxMagnitude = maxMagnitude;
+        if (climateState) {
+            climateState->regulatorConfig.cryosphereAlbedo.maxMagnitude = maxMagnitude;
+        }
+    }
+
+    static f32 climateRegulatorCryosphereAlbedoMaxMagnitude() {
+        return climateRegulatorRuntimeConfig.cryosphereAlbedo.maxMagnitude;
+    }
+
+    static void setClimateRegulatorBaseAlbedoEnabled(const bool enabled) {
+        climateRegulatorRuntimeConfig.baseAlbedo.enabled = enabled;
+        if (climateState) {
+            climateState->regulatorConfig.baseAlbedo.enabled = enabled;
+        }
+    }
+
+    static bool isClimateRegulatorBaseAlbedoEnabled() {
+        return climateRegulatorRuntimeConfig.baseAlbedo.enabled;
+    }
+
+    static void setClimateRegulatorBaseAlbedoStrength(const f32 strength) {
+        climateRegulatorRuntimeConfig.baseAlbedo.strength = strength;
+        if (climateState) {
+            climateState->regulatorConfig.baseAlbedo.strength = strength;
+        }
+    }
+
+    static f32 climateRegulatorBaseAlbedoStrength() {
+        return climateRegulatorRuntimeConfig.baseAlbedo.strength;
+    }
+
+    static void setClimateRegulatorBaseAlbedoMaxMagnitude(const f32 maxMagnitude) {
+        climateRegulatorRuntimeConfig.baseAlbedo.maxMagnitude = maxMagnitude;
+        if (climateState) {
+            climateState->regulatorConfig.baseAlbedo.maxMagnitude = maxMagnitude;
+        }
+    }
+
+    static f32 climateRegulatorBaseAlbedoMaxMagnitude() {
+        return climateRegulatorRuntimeConfig.baseAlbedo.maxMagnitude;
     }
 
     static void advanceClimateTurn() {
@@ -208,13 +307,25 @@ private:
     static bool climateTurnInProgress;
     static u32 appliedClimateBiomeYears;
     static PlayScene* play;
-    static bool climateRegulatorCorrectionEnabled;
-    static f32 climateRegulatorTargetTemperatureC;
+    static ClimateRegulatorRuntimeConfig climateRegulatorRuntimeConfig;
+
+    static void copyActuatorSettings(
+        ClimateRegulatorActuatorRuntime& destination,
+        const ClimateRegulatorActuatorRuntime& source) {
+        destination.enabled = source.enabled;
+        destination.strength = source.strength;
+        destination.maxMagnitude = source.maxMagnitude;
+    }
 
     static void applyClimateRegulatorSettings(ClimateState& state) {
-        state.regulatorCorrectionEnabled = climateRegulatorCorrectionEnabled;
-        state.regulatorTargetGlobalMeanTemperatureC = climateRegulatorTargetTemperatureC;
-        state.currentYearRegulatorTargetTemperatureC = climateRegulatorTargetTemperatureC;
+        state.regulatorConfig.correctionEnabled = climateRegulatorRuntimeConfig.correctionEnabled;
+        state.regulatorConfig.targetGlobalMeanTemperatureC =
+            climateRegulatorRuntimeConfig.targetGlobalMeanTemperatureC;
+        copyActuatorSettings(state.regulatorConfig.insolation, climateRegulatorRuntimeConfig.insolation);
+        copyActuatorSettings(
+            state.regulatorConfig.cryosphereAlbedo,
+            climateRegulatorRuntimeConfig.cryosphereAlbedo);
+        copyActuatorSettings(state.regulatorConfig.baseAlbedo, climateRegulatorRuntimeConfig.baseAlbedo);
     }
 };
 

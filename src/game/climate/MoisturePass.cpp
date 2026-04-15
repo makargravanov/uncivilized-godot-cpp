@@ -154,6 +154,61 @@ void applyOceanEvaporation(ClimateState& climateState) {
     }
 }
 
+void applyLandEvapotranspiration(ClimateState& climateState) {
+    if (!climateState.landWaterStorageKgPerM2 || !climateState.landWaterStorageCapacityKgPerM2 ||
+        !climateState.forestCoverFraction || !climateState.humidityKgPerKg || !climateState.temperatureKelvin) {
+        return;
+    }
+
+    for (u32 i = 0; i < climateState.tileCount; ++i) {
+        if (isOceanTile(climateState, i)) {
+            continue;
+        }
+
+        const f32 storageCapacity = std::max(climateState.landWaterStorageCapacityKgPerM2[i], 1e-3f);
+        f32 landWaterStorage = std::clamp(climateState.landWaterStorageKgPerM2[i], 0.0f, storageCapacity);
+        if (landWaterStorage <= 0.0f) {
+            continue;
+        }
+
+        const f32 temperatureCelsius = climateState.temperatureKelvin[i] - CONFIG.shared.kelvinOffset;
+        const f32 maxHumidity = calculateMaxSpecificHumidity(temperatureCelsius);
+        const f32 currentHumidity = climateState.humidityKgPerKg[i];
+        const f32 humidityDeficit = std::max(0.0f, maxHumidity - currentHumidity);
+        if (humidityDeficit <= 0.0f) {
+            continue;
+        }
+
+        const f32 forestCoverFraction = std::clamp(climateState.forestCoverFraction[i], 0.0f, 1.0f);
+        const f32 storageFraction = std::clamp(landWaterStorage / storageCapacity, 0.0f, 1.0f);
+        const f32 humidityResponse = std::pow(
+            std::clamp(humidityDeficit / std::max(maxHumidity, 1e-4f), 0.0f, 1.0f),
+            std::max(CONFIG.moisture.landEvapotranspirationHumidityExponent, 1e-3f));
+        const f32 temperatureResponse = std::clamp((temperatureCelsius + 5.0f) / 25.0f, 0.0f, 1.0f);
+        const f32 forestTranspirationMultiplier = 1.0f
+            + forestCoverFraction * std::max(CONFIG.moisture.forestEvapotranspirationMultiplier, 0.0f);
+        const f32 potentialEvapotranspiration = storageCapacity
+            * CONFIG.moisture.landEvapotranspirationRate
+            * storageFraction
+            * humidityResponse
+            * temperatureResponse
+            * forestTranspirationMultiplier;
+        const f32 humidityAddition = std::min(
+            potentialEvapotranspiration / std::max(CONFIG.moisture.landWaterToHumidityScaleKgPerM2, 1e-3f),
+            humidityDeficit);
+        const f32 actualWaterRemoval = humidityAddition
+            * std::max(CONFIG.moisture.landWaterToHumidityScaleKgPerM2, 1e-3f);
+
+        landWaterStorage = std::max(0.0f, landWaterStorage - actualWaterRemoval);
+        climateState.landWaterStorageKgPerM2[i] = landWaterStorage;
+        climateState.humidityKgPerKg[i] = currentHumidity + humidityAddition;
+        failIfNonFinite(climateState.landWaterStorageKgPerM2[i],
+            "Non-finite land water storage in MoisturePass::applyLandEvapotranspiration().");
+        failIfNonFinite(climateState.humidityKgPerKg[i],
+            "Non-finite humidity in MoisturePass::applyLandEvapotranspiration().");
+    }
+}
+
 void precomputeTransportMetadata(ClimateState& climateState) {
     if (!climateState.windEastMps || !climateState.windNorthMps ||
         !climateState.moistureUpwindEastIndex || !climateState.moistureUpwindNorthIndex ||
@@ -321,6 +376,7 @@ void MoisturePass::initialize(ClimateState& climateState) {
     // Run several cycles to reach a plausible initial distribution.
     for (u32 warmup = 0; warmup < 4; ++warmup) {
         applyOceanEvaporation(climateState);
+        applyLandEvapotranspiration(climateState);
         advectMoisture(climateState);
         applyCondensationAndPrecipitation(climateState);
     }
@@ -329,6 +385,7 @@ void MoisturePass::initialize(ClimateState& climateState) {
     std::memset(climateState.turnPrecipitation.get(), 0, climateState.tileCount * sizeof(f32));
 
     applyOceanEvaporation(climateState);
+    applyLandEvapotranspiration(climateState);
     advectMoisture(climateState);
     applyCondensationAndPrecipitation(climateState);
 }
@@ -341,6 +398,7 @@ void MoisturePass::advanceOneTurn(ClimateState& climateState) {
     precomputeTransportMetadata(climateState);
 
     applyOceanEvaporation(climateState);
+    applyLandEvapotranspiration(climateState);
     advectMoisture(climateState);
     applyCondensationAndPrecipitation(climateState);
 }

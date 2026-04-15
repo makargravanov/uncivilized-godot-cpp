@@ -45,6 +45,24 @@ public:
     bool is_climate_regulator_correction_enabled() const;
     void set_climate_regulator_target_temperature_c(float temperatureC);
     float get_climate_regulator_target_temperature_c() const;
+    void set_climate_regulator_insolation_enabled(bool enabled);
+    bool is_climate_regulator_insolation_enabled() const;
+    void set_climate_regulator_insolation_strength(float strength);
+    float get_climate_regulator_insolation_strength() const;
+    void set_climate_regulator_insolation_max_magnitude(float maxMagnitude);
+    float get_climate_regulator_insolation_max_magnitude() const;
+    void set_climate_regulator_cryosphere_albedo_enabled(bool enabled);
+    bool is_climate_regulator_cryosphere_albedo_enabled() const;
+    void set_climate_regulator_cryosphere_albedo_strength(float strength);
+    float get_climate_regulator_cryosphere_albedo_strength() const;
+    void set_climate_regulator_cryosphere_albedo_max_magnitude(float maxMagnitude);
+    float get_climate_regulator_cryosphere_albedo_max_magnitude() const;
+    void set_climate_regulator_base_albedo_enabled(bool enabled);
+    bool is_climate_regulator_base_albedo_enabled() const;
+    void set_climate_regulator_base_albedo_strength(float strength);
+    float get_climate_regulator_base_albedo_strength() const;
+    void set_climate_regulator_base_albedo_max_magnitude(float maxMagnitude);
+    float get_climate_regulator_base_albedo_max_magnitude() const;
 
     // Start computing the next climate turn in the background if no turn is pending.
     void advance_climate_turn();

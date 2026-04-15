@@ -46,8 +46,18 @@ const BIOME_NAMES := {
 @onready var viewModeLabel: Label = $CanvasLayer/ViewModeLabel
 @onready var climateSummaryLabel: Label = $CanvasLayer/ClimateSummaryLabel
 @onready var climateRegulatorLabel: Label = $CanvasLayer/ClimateRegulatorLabel
+@onready var climateRegulatorOutputsLabel: Label = $CanvasLayer/ClimateRegulatorOutputsLabel
 @onready var regulatorEnableCheckBox: CheckBox = $CanvasLayer/RegulatorEnableCheckBox
 @onready var regulatorTargetSpinBox: SpinBox = $CanvasLayer/RegulatorTargetSpinBox
+@onready var insolationEnableCheckBox: CheckBox = $CanvasLayer/InsolationEnableCheckBox
+@onready var insolationStrengthSpinBox: SpinBox = $CanvasLayer/InsolationStrengthSpinBox
+@onready var insolationMaxSpinBox: SpinBox = $CanvasLayer/InsolationMaxSpinBox
+@onready var cryosphereEnableCheckBox: CheckBox = $CanvasLayer/CryosphereEnableCheckBox
+@onready var cryosphereStrengthSpinBox: SpinBox = $CanvasLayer/CryosphereStrengthSpinBox
+@onready var cryosphereMaxSpinBox: SpinBox = $CanvasLayer/CryosphereMaxSpinBox
+@onready var baseAlbedoEnableCheckBox: CheckBox = $CanvasLayer/BaseAlbedoEnableCheckBox
+@onready var baseAlbedoStrengthSpinBox: SpinBox = $CanvasLayer/BaseAlbedoStrengthSpinBox
+@onready var baseAlbedoMaxSpinBox: SpinBox = $CanvasLayer/BaseAlbedoMaxSpinBox
 @onready var tileInfoLabel: Label = $CanvasLayer/TileInfoLabel
 @onready var turnLabel: Label = $CanvasLayer/TurnLabel
 
@@ -58,6 +68,15 @@ func _ready():
 	_syncRegulatorControls()
 	regulatorEnableCheckBox.toggled.connect(_on_regulator_enable_check_box_toggled)
 	regulatorTargetSpinBox.value_changed.connect(_on_regulator_target_spin_box_value_changed)
+	insolationEnableCheckBox.toggled.connect(_on_insolation_enable_check_box_toggled)
+	insolationStrengthSpinBox.value_changed.connect(_on_insolation_strength_spin_box_value_changed)
+	insolationMaxSpinBox.value_changed.connect(_on_insolation_max_spin_box_value_changed)
+	cryosphereEnableCheckBox.toggled.connect(_on_cryosphere_enable_check_box_toggled)
+	cryosphereStrengthSpinBox.value_changed.connect(_on_cryosphere_strength_spin_box_value_changed)
+	cryosphereMaxSpinBox.value_changed.connect(_on_cryosphere_max_spin_box_value_changed)
+	baseAlbedoEnableCheckBox.toggled.connect(_on_base_albedo_enable_check_box_toggled)
+	baseAlbedoStrengthSpinBox.value_changed.connect(_on_base_albedo_strength_spin_box_value_changed)
+	baseAlbedoMaxSpinBox.value_changed.connect(_on_base_albedo_max_spin_box_value_changed)
 	_updateLabel(VIEW_NORMAL)
 	_updateTurnLabel()
 	_updateClimateSummaryLabel()
@@ -130,6 +149,12 @@ func _showTileInfo(info: Dictionary):
 		lines.append("Запас снега: %.4f" % info.get("snow_water_equivalent", 0.0))
 	if info.has("sea_ice_fraction"):
 		lines.append("Морской лёд: %.0f%%" % (info.get("sea_ice_fraction", 0.0) * 100.0))
+	if info.has("soil_water_storage"):
+		lines.append("Почвенная влага: %.4f" % info.get("soil_water_storage", 0.0))
+	if info.has("soil_water_capacity"):
+		lines.append("Емкость почвы: %.4f" % info.get("soil_water_capacity", 0.0))
+	if info.has("tile_water_storage_total"):
+		lines.append("Вода на тайле: %.4f" % info.get("tile_water_storage_total", 0.0))
 	if info.has("precipitation_annual"):
 		lines.append("Осадки (год, текущие): %.4f" % info.get("precipitation_annual", 0.0))
 	var completed_years: int = int(info.get("climate_years_completed", 0))
@@ -179,11 +204,11 @@ func _updateClimateSummaryLabel():
 		return
 
 	var current_years_completed: int = int(summary.get("climate_years_completed", 0))
-	var current_temperature_c: float = float(summary.get("current_year_mean_temperature_c", 0.0))
-	var ice_free_temperature_c: float = float(summary.get("current_year_ice_free_equilibrium_temperature_c", current_temperature_c))
-	var cryosphere_cooling_delta_c: float = float(summary.get("current_year_cryosphere_cooling_delta_c", 0.0))
-	var current_cryosphere: float = float(summary.get("current_year_mean_cryosphere_fraction", 0.0))
-	var current_albedo: float = float(summary.get("current_year_mean_surface_albedo", 0.0))
+	var current_temperature_c: float = float(summary.get("current_turn_mean_temperature_c", 0.0))
+	var ice_free_temperature_c: float = float(summary.get("current_turn_ice_free_equilibrium_temperature_c", current_temperature_c))
+	var cryosphere_cooling_delta_c: float = float(summary.get("current_turn_cryosphere_cooling_delta_c", 0.0))
+	var current_cryosphere: float = float(summary.get("current_turn_mean_cryosphere_fraction", 0.0))
+	var current_albedo: float = float(summary.get("current_turn_mean_surface_albedo", 0.0))
 
 	var parts: PackedStringArray = PackedStringArray()
 	parts.append("Климат")
@@ -206,25 +231,48 @@ func _updateClimateRegulatorLabel():
 	var summary: Dictionary = playScene.get_climate_summary()
 	if summary.is_empty():
 		climateRegulatorLabel.text = ""
+		if climateRegulatorOutputsLabel:
+			climateRegulatorOutputsLabel.text = ""
 		return
 
 	var target_temperature_c: float = float(summary.get("target_global_mean_temperature_c", 14.0))
 	var regulator_enabled: bool = bool(summary.get("regulator_correction_enabled", false))
+	var controller_temperature_c: float = float(summary.get("controller_mean_temperature_c", 0.0))
 	var temperature_error_c: float = float(summary.get("regulator_temperature_error_c", 0.0))
-	var trend_c_per_year: float = float(summary.get("regulator_trend_c_per_year", 0.0))
-	var cryosphere_delta_c: float = float(summary.get("regulator_cryosphere_cooling_delta_c", 0.0))
-	var control_signal_wm2: float = float(summary.get("regulator_control_signal_wm2", 0.0))
+	var trend_c_per_year: float = float(summary.get("controller_trend_c_per_year", 0.0))
+	var cryosphere_delta_c: float = float(summary.get("controller_cryosphere_cooling_delta_c", 0.0))
+	var demand_normalized: float = float(summary.get("regulator_heating_demand_normalized", 0.0))
+	var demand_wm2: float = float(summary.get("regulator_heating_demand_wm2", 0.0))
+	var kp: float = float(summary.get("regulator_effective_kp", 0.0))
+	var kd: float = float(summary.get("regulator_effective_kd", 0.0))
+	var kff: float = float(summary.get("regulator_effective_kff", 0.0))
+	var insolation_output_wm2: float = float(summary.get("regulator_insolation_output_wm2", 0.0))
+	var cryosphere_output: float = float(summary.get("regulator_cryosphere_albedo_output", 0.0))
+	var base_albedo_output: float = float(summary.get("regulator_base_albedo_output", 0.0))
 
 	var parts: PackedStringArray = PackedStringArray()
 	parts.append("Regulator")
 	parts.append("apply on" if regulator_enabled else "apply off")
 	parts.append("target %.1fC" % target_temperature_c)
+	parts.append("ctrl T %.2fC" % controller_temperature_c)
 	parts.append("err %+.2fC" % temperature_error_c)
 	parts.append("trend %+.3fC/yr" % trend_c_per_year)
 	parts.append("cryo %+.2fC" % cryosphere_delta_c)
-	parts.append("ctrl %+.1fW/m2" % control_signal_wm2)
+	parts.append("u %+.2f" % demand_normalized)
+	parts.append("eq %+.1fW/m2" % demand_wm2)
+	parts.append("Kp %.2f" % kp)
+	parts.append("Kd %.2f" % kd)
+	parts.append("Kff %.2f" % kff)
 
 	climateRegulatorLabel.text = " | ".join(parts)
+
+	if climateRegulatorOutputsLabel:
+		var outputParts: PackedStringArray = PackedStringArray()
+		outputParts.append("Outputs")
+		outputParts.append("insol %+.1fW/m2" % insolation_output_wm2)
+		outputParts.append("cryo %+.2f" % cryosphere_output)
+		outputParts.append("base %+.3f" % base_albedo_output)
+		climateRegulatorOutputsLabel.text = " | ".join(outputParts)
 
 func _syncRegulatorControls():
 	if playScene == null:
@@ -234,9 +282,54 @@ func _syncRegulatorControls():
 		regulatorEnableCheckBox.button_pressed = playScene.is_climate_regulator_correction_enabled()
 	if regulatorTargetSpinBox:
 		regulatorTargetSpinBox.value = playScene.get_climate_regulator_target_temperature_c()
+	if insolationEnableCheckBox:
+		insolationEnableCheckBox.button_pressed = playScene.is_climate_regulator_insolation_enabled()
+	if insolationStrengthSpinBox:
+		insolationStrengthSpinBox.value = playScene.get_climate_regulator_insolation_strength()
+	if insolationMaxSpinBox:
+		insolationMaxSpinBox.value = playScene.get_climate_regulator_insolation_max_magnitude()
+	if cryosphereEnableCheckBox:
+		cryosphereEnableCheckBox.button_pressed = playScene.is_climate_regulator_cryosphere_albedo_enabled()
+	if cryosphereStrengthSpinBox:
+		cryosphereStrengthSpinBox.value = playScene.get_climate_regulator_cryosphere_albedo_strength()
+	if cryosphereMaxSpinBox:
+		cryosphereMaxSpinBox.value = playScene.get_climate_regulator_cryosphere_albedo_max_magnitude()
+	if baseAlbedoEnableCheckBox:
+		baseAlbedoEnableCheckBox.button_pressed = playScene.is_climate_regulator_base_albedo_enabled()
+	if baseAlbedoStrengthSpinBox:
+		baseAlbedoStrengthSpinBox.value = playScene.get_climate_regulator_base_albedo_strength()
+	if baseAlbedoMaxSpinBox:
+		baseAlbedoMaxSpinBox.value = playScene.get_climate_regulator_base_albedo_max_magnitude()
 
 func _on_regulator_enable_check_box_toggled(button_pressed: bool):
 	playScene.set_climate_regulator_correction_enabled(button_pressed)
 
 func _on_regulator_target_spin_box_value_changed(value: float):
 	playScene.set_climate_regulator_target_temperature_c(value)
+
+func _on_insolation_enable_check_box_toggled(button_pressed: bool):
+	playScene.set_climate_regulator_insolation_enabled(button_pressed)
+
+func _on_insolation_strength_spin_box_value_changed(value: float):
+	playScene.set_climate_regulator_insolation_strength(value)
+
+func _on_insolation_max_spin_box_value_changed(value: float):
+	playScene.set_climate_regulator_insolation_max_magnitude(value)
+
+func _on_cryosphere_enable_check_box_toggled(button_pressed: bool):
+	playScene.set_climate_regulator_cryosphere_albedo_enabled(button_pressed)
+
+func _on_cryosphere_strength_spin_box_value_changed(value: float):
+	playScene.set_climate_regulator_cryosphere_albedo_strength(value)
+
+func _on_cryosphere_max_spin_box_value_changed(value: float):
+	playScene.set_climate_regulator_cryosphere_albedo_max_magnitude(value)
+
+func _on_base_albedo_enable_check_box_toggled(button_pressed: bool):
+	playScene.set_climate_regulator_base_albedo_enabled(button_pressed)
+
+func _on_base_albedo_strength_spin_box_value_changed(value: float):
+	playScene.set_climate_regulator_base_albedo_strength(value)
+
+func _on_base_albedo_max_spin_box_value_changed(value: float):
+	playScene.set_climate_regulator_base_albedo_max_magnitude(value)

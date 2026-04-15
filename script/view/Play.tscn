@@ -52,32 +52,155 @@ offset_bottom = 96.0
 [node name="ClimateRegulatorLabel" type="Label" parent="CanvasLayer"]
 offset_left = 16.0
 offset_top = 100.0
-offset_right = 720.0
+offset_right = 880.0
 offset_bottom = 124.0
+
+[node name="ClimateRegulatorOutputsLabel" type="Label" parent="CanvasLayer"]
+offset_left = 16.0
+offset_top = 128.0
+offset_right = 960.0
+offset_bottom = 152.0
 
 [node name="RegulatorEnableCheckBox" type="CheckBox" parent="CanvasLayer"]
 offset_left = 16.0
-offset_top = 128.0
+offset_top = 160.0
 offset_right = 240.0
-offset_bottom = 152.0
+offset_bottom = 184.0
 text = "Apply regulator"
 
 [node name="RegulatorTargetLabel" type="Label" parent="CanvasLayer"]
 offset_left = 16.0
-offset_top = 156.0
+offset_top = 192.0
 offset_right = 240.0
-offset_bottom = 180.0
+offset_bottom = 216.0
 text = "Target mean temperature"
 
 [node name="RegulatorTargetSpinBox" type="SpinBox" parent="CanvasLayer"]
 offset_left = 240.0
-offset_top = 152.0
+offset_top = 188.0
 offset_right = 360.0
-offset_bottom = 184.0
+offset_bottom = 220.0
 min_value = -50.0
 max_value = 50.0
 step = 0.1
 value = 14.0
+
+[node name="InsolationEnableCheckBox" type="CheckBox" parent="CanvasLayer"]
+offset_left = 16.0
+offset_top = 228.0
+offset_right = 240.0
+offset_bottom = 252.0
+text = "Insolation actuator"
+
+[node name="InsolationStrengthLabel" type="Label" parent="CanvasLayer"]
+offset_left = 32.0
+offset_top = 260.0
+offset_right = 150.0
+offset_bottom = 284.0
+text = "Strength"
+
+[node name="InsolationStrengthSpinBox" type="SpinBox" parent="CanvasLayer"]
+offset_left = 160.0
+offset_top = 256.0
+offset_right = 272.0
+offset_bottom = 288.0
+max_value = 2.0
+step = 0.05
+value = 1.0
+
+[node name="InsolationMaxLabel" type="Label" parent="CanvasLayer"]
+offset_left = 296.0
+offset_top = 260.0
+offset_right = 392.0
+offset_bottom = 284.0
+text = "Max"
+
+[node name="InsolationMaxSpinBox" type="SpinBox" parent="CanvasLayer"]
+offset_left = 400.0
+offset_top = 256.0
+offset_right = 512.0
+offset_bottom = 288.0
+max_value = 80.0
+step = 0.5
+value = 35.0
+
+[node name="CryosphereEnableCheckBox" type="CheckBox" parent="CanvasLayer"]
+offset_left = 16.0
+offset_top = 300.0
+offset_right = 260.0
+offset_bottom = 324.0
+text = "Cryosphere albedo"
+
+[node name="CryosphereStrengthLabel" type="Label" parent="CanvasLayer"]
+offset_left = 32.0
+offset_top = 332.0
+offset_right = 150.0
+offset_bottom = 356.0
+text = "Strength"
+
+[node name="CryosphereStrengthSpinBox" type="SpinBox" parent="CanvasLayer"]
+offset_left = 160.0
+offset_top = 328.0
+offset_right = 272.0
+offset_bottom = 360.0
+max_value = 2.0
+step = 0.05
+value = 1.0
+
+[node name="CryosphereMaxLabel" type="Label" parent="CanvasLayer"]
+offset_left = 296.0
+offset_top = 332.0
+offset_right = 392.0
+offset_bottom = 356.0
+text = "Max"
+
+[node name="CryosphereMaxSpinBox" type="SpinBox" parent="CanvasLayer"]
+offset_left = 400.0
+offset_top = 328.0
+offset_right = 512.0
+offset_bottom = 360.0
+max_value = 1.5
+step = 0.05
+value = 1.0
+
+[node name="BaseAlbedoEnableCheckBox" type="CheckBox" parent="CanvasLayer"]
+offset_left = 16.0
+offset_top = 372.0
+offset_right = 260.0
+offset_bottom = 396.0
+text = "Base albedo"
+
+[node name="BaseAlbedoStrengthLabel" type="Label" parent="CanvasLayer"]
+offset_left = 32.0
+offset_top = 404.0
+offset_right = 150.0
+offset_bottom = 428.0
+text = "Strength"
+
+[node name="BaseAlbedoStrengthSpinBox" type="SpinBox" parent="CanvasLayer"]
+offset_left = 160.0
+offset_top = 400.0
+offset_right = 272.0
+offset_bottom = 432.0
+max_value = 2.0
+step = 0.05
+value = 0.4
+
+[node name="BaseAlbedoMaxLabel" type="Label" parent="CanvasLayer"]
+offset_left = 296.0
+offset_top = 404.0
+offset_right = 392.0
+offset_bottom = 428.0
+text = "Max"
+
+[node name="BaseAlbedoMaxSpinBox" type="SpinBox" parent="CanvasLayer"]
+offset_left = 400.0
+offset_top = 400.0
+offset_right = 512.0
+offset_bottom = 432.0
+max_value = 0.3
+step = 0.01
+value = 0.12
 
 [node name="TileInfoLabel" type="Label" parent="CanvasLayer"]
 anchors_preset = 3

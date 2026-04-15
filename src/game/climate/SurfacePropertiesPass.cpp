@@ -30,6 +30,22 @@ bool isOceanTile(const ClimateState& climateState, const u32 index) {
     return climateState.relativeAltitude[index] < CONFIG.shared.oceanAltitudeThreshold;
 }
 
+f32 getBaseAlbedoRegulatorBias(const ClimateState& climateState) {
+    if (!climateState.regulatorConfig.correctionEnabled) {
+        return 0.0f;
+    }
+
+    return climateState.regulatorConfig.baseAlbedo.output;
+}
+
+f32 getCryosphereResponseScale(const ClimateState& climateState) {
+    if (!climateState.regulatorConfig.correctionEnabled) {
+        return 1.0f;
+    }
+
+    return std::clamp(1.0f + climateState.regulatorConfig.cryosphereAlbedo.output, 0.0f, 1.35f);
+}
+
 f32 getBaseBiomeAlbedo(const BiomeType biome) {
     switch (biome) {
         case BIOME_DEEP_OCEAN:
@@ -89,6 +105,97 @@ f32 getBaseHeatCapacity(const TileData& tile) {
     }
 }
 
+f32 getBaseLandWaterStorageCapacity(const BiomeType biome) {
+    switch (biome) {
+        case BIOME_POLAR_DESERT:
+            return 60.0f;
+        case BIOME_TUNDRA:
+            return 85.0f;
+        case BIOME_BOREAL_FOREST:
+            return 140.0f;
+        case BIOME_COLD_STEPPE:
+            return 75.0f;
+        case BIOME_TEMPERATE_FOREST:
+            return 155.0f;
+        case BIOME_TEMPERATE_STEPPE:
+            return 90.0f;
+        case BIOME_XERIC_SHRUBLAND:
+            return 50.0f;
+        case BIOME_HOT_DESERT:
+            return 25.0f;
+        case BIOME_SAVANNA:
+            return 80.0f;
+        case BIOME_TROPICAL_SEASONAL_FOREST:
+            return 170.0f;
+        case BIOME_TROPICAL_RAINFOREST:
+            return 210.0f;
+        case BIOME_ALPINE:
+            return 65.0f;
+        case BIOME_DEEP_OCEAN:
+        case BIOME_SHALLOW_OCEAN:
+        case BIOME_INLAND_SEA:
+        case BIOME_SHALLOW_INLAND_SEA:
+            return 0.0f;
+        case BIOME_TYPE_COUNT:
+        default:
+            return 100.0f;
+    }
+}
+
+f32 getLandWaterInfiltrationFraction(const BiomeType biome, const f32 forestCoverFraction) {
+    f32 baseInfiltrationFraction = 0.20f;
+    switch (biome) {
+        case BIOME_POLAR_DESERT:
+            baseInfiltrationFraction = 0.12f;
+            break;
+        case BIOME_TUNDRA:
+            baseInfiltrationFraction = 0.18f;
+            break;
+        case BIOME_BOREAL_FOREST:
+            baseInfiltrationFraction = 0.24f;
+            break;
+        case BIOME_COLD_STEPPE:
+            baseInfiltrationFraction = 0.20f;
+            break;
+        case BIOME_TEMPERATE_FOREST:
+            baseInfiltrationFraction = 0.28f;
+            break;
+        case BIOME_TEMPERATE_STEPPE:
+            baseInfiltrationFraction = 0.22f;
+            break;
+        case BIOME_XERIC_SHRUBLAND:
+            baseInfiltrationFraction = 0.14f;
+            break;
+        case BIOME_HOT_DESERT:
+            baseInfiltrationFraction = 0.08f;
+            break;
+        case BIOME_SAVANNA:
+            baseInfiltrationFraction = 0.24f;
+            break;
+        case BIOME_TROPICAL_SEASONAL_FOREST:
+            baseInfiltrationFraction = 0.30f;
+            break;
+        case BIOME_TROPICAL_RAINFOREST:
+            baseInfiltrationFraction = 0.34f;
+            break;
+        case BIOME_ALPINE:
+            baseInfiltrationFraction = 0.16f;
+            break;
+        case BIOME_DEEP_OCEAN:
+        case BIOME_SHALLOW_OCEAN:
+        case BIOME_INLAND_SEA:
+        case BIOME_SHALLOW_INLAND_SEA:
+        case BIOME_TYPE_COUNT:
+        default:
+            break;
+    }
+
+    return std::clamp(
+        baseInfiltrationFraction + forestCoverFraction * CONFIG.surface.forestWaterInfiltrationBonus,
+        0.0f,
+        0.95f);
+}
+
 f32 computeSnowfallFraction(const f32 temperatureCelsius) {
     const f32 transitionRange = std::max(CONFIG.surface.snowfallTransitionRangeC, 1e-3f);
     const f32 normalized =
@@ -117,6 +224,9 @@ void recomputeDynamicSurfaceProperties(ClimateState& climateState) {
         return;
     }
 
+    const f32 baseAlbedoRegulatorBias = getBaseAlbedoRegulatorBias(climateState);
+    const f32 cryosphereResponseScale = getCryosphereResponseScale(climateState);
+
     for (u32 index = 0; index < climateState.tileCount; ++index) {
         const f32 forestCoverFraction = std::clamp(climateState.forestCoverFraction[index], 0.0f, 1.0f);
         const f32 snowCoverFraction = std::clamp(climateState.snowCoverFraction[index], 0.0f, 1.0f);
@@ -128,20 +238,24 @@ void recomputeDynamicSurfaceProperties(ClimateState& climateState) {
         failIfNonFinite(seaIceFraction,
             "Non-finite sea ice fraction in SurfacePropertiesPass::recomputeDynamicSurfaceProperties().");
 
-        f32 surfaceAlbedo = climateState.baseSurfaceAlbedo[index];
+        f32 surfaceAlbedo = std::clamp(climateState.baseSurfaceAlbedo[index] + baseAlbedoRegulatorBias, 0.0f, 1.0f);
         if (!isOceanTile(climateState, index) && forestCoverFraction > 0.0f) {
             surfaceAlbedo +=
                 (CONFIG.surface.forestCanopyAlbedo - surfaceAlbedo) * forestCoverFraction;
         }
 
         if (isOceanTile(climateState, index)) {
-            surfaceAlbedo += (CONFIG.surface.iceAlbedo - surfaceAlbedo) * seaIceFraction;
+            const f32 seaIceBlendWeight = std::clamp(seaIceFraction * cryosphereResponseScale, 0.0f, 1.0f);
+            surfaceAlbedo += (CONFIG.surface.iceAlbedo - surfaceAlbedo) * seaIceBlendWeight;
         } else {
             const f32 visibleSnowFraction = snowCoverFraction * std::clamp(
                 1.0f - CONFIG.surface.canopySnowMaskStrength * forestCoverFraction,
                 0.0f,
                 1.0f);
-            const f32 snowBlendWeight = computeSnowAlbedoBlendWeight(surfaceAlbedo, visibleSnowFraction);
+            const f32 snowBlendWeight = std::clamp(
+                computeSnowAlbedoBlendWeight(surfaceAlbedo, visibleSnowFraction) * cryosphereResponseScale,
+                0.0f,
+                1.0f);
             surfaceAlbedo += (CONFIG.surface.iceAlbedo - surfaceAlbedo) * snowBlendWeight;
         }
         climateState.surfaceAlbedo[index] = std::clamp(surfaceAlbedo, 0.0f, 1.0f);
@@ -159,6 +273,26 @@ void recomputeDynamicSurfaceProperties(ClimateState& climateState) {
         climateState.effectiveHeatCapacity[index] = std::max(effectiveHeatCapacity, 1e-3f);
         failIfNonFinite(climateState.effectiveHeatCapacity[index],
             "Non-finite effective heat capacity in SurfacePropertiesPass::recomputeDynamicSurfaceProperties().");
+
+        if (climateState.landWaterStorageKgPerM2 && climateState.landWaterStorageCapacityKgPerM2) {
+            const f32 storageCapacity = isOceanTile(climateState, index)
+                ? 0.0f
+                : std::max(climateState.landWaterStorageCapacityKgPerM2[index], 0.0f);
+            climateState.landWaterStorageCapacityKgPerM2[index] = storageCapacity;
+            climateState.landWaterStorageKgPerM2[index] = std::clamp(
+                climateState.landWaterStorageKgPerM2[index],
+                0.0f,
+                storageCapacity);
+        }
+
+        if (climateState.landWaterInfiltrationFraction) {
+            climateState.landWaterInfiltrationFraction[index] = isOceanTile(climateState, index)
+                ? 0.0f
+                : std::clamp(
+                    climateState.landWaterInfiltrationFraction[index],
+                    0.0f,
+                    0.95f);
+        }
     }
 }
 
@@ -201,15 +335,26 @@ void updateCryosphereState(ClimateState& climateState) {
         const f32 snowfallFraction = computeSnowfallFraction(temperatureCelsius);
         const f32 snowfallAmount = turnPrecipitation * snowfallFraction;
         const f32 rainfallAmount = turnPrecipitation * (1.0f - snowfallFraction);
+        const f32 infiltrationFraction = climateState.landWaterInfiltrationFraction
+            ? std::clamp(climateState.landWaterInfiltrationFraction[index], 0.0f, 0.95f)
+            : 0.2f;
 
         f32 snowWaterEquivalent = climateState.snowWaterEquivalent[index] + snowfallAmount;
+        f32 landWaterGain = rainfallAmount * infiltrationFraction;
         if (temperatureCelsius > CONFIG.surface.snowMeltTemperatureC) {
-            snowWaterEquivalent -=
+            const f32 snowMeltAmount = std::min(
+                snowWaterEquivalent,
                 (temperatureCelsius - CONFIG.surface.snowMeltTemperatureC)
-                * CONFIG.surface.snowMeltRate;
+                * CONFIG.surface.snowMeltRate);
+            snowWaterEquivalent -= snowMeltAmount;
+            landWaterGain += snowMeltAmount * infiltrationFraction;
         }
         if (rainfallAmount > 0.0f && temperatureCelsius > CONFIG.surface.snowfallTemperatureC - 1.0f) {
-            snowWaterEquivalent -= rainfallAmount * CONFIG.surface.rainOnSnowMeltFactor;
+            const f32 rainOnSnowMeltAmount = std::min(
+                snowWaterEquivalent,
+                rainfallAmount * CONFIG.surface.rainOnSnowMeltFactor);
+            snowWaterEquivalent -= rainOnSnowMeltAmount;
+            landWaterGain += rainOnSnowMeltAmount * infiltrationFraction;
         }
 
         snowWaterEquivalent = std::max(snowWaterEquivalent, 0.0f);
@@ -218,6 +363,15 @@ void updateCryosphereState(ClimateState& climateState) {
             snowWaterEquivalent / std::max(CONFIG.surface.snowFullCoverWaterEquivalent, 1e-4f),
             0.0f,
             1.0f);
+
+        if (climateState.landWaterStorageKgPerM2 && climateState.landWaterStorageCapacityKgPerM2) {
+            const f32 storageCapacity = std::max(climateState.landWaterStorageCapacityKgPerM2[index], 0.0f);
+            climateState.landWaterStorageCapacityKgPerM2[index] = storageCapacity;
+            climateState.landWaterStorageKgPerM2[index] = std::clamp(
+                climateState.landWaterStorageKgPerM2[index] + landWaterGain,
+                0.0f,
+                storageCapacity);
+        }
         failIfNonFinite(climateState.snowWaterEquivalent[index],
             "Non-finite snow water equivalent in SurfacePropertiesPass::updateCryosphereState().");
         failIfNonFinite(climateState.snowCoverFraction[index],
@@ -245,6 +399,19 @@ void refreshStaticSurfaceInputs(ClimateState& climateState, const TileData* tile
         }
         climateState.baseSurfaceAlbedo[index] = baseSurfaceAlbedo;
         climateState.baseHeatCapacity[index] = getBaseHeatCapacity(tile);
+
+        if (climateState.landWaterStorageCapacityKgPerM2) {
+            const f32 baseCapacity = getBaseLandWaterStorageCapacity(tile.biome);
+            const f32 forestCapacityBonus = 1.0f + CONFIG.surface.forestSoilWaterCapacityBonus * climateState.forestCoverFraction[index];
+            climateState.landWaterStorageCapacityKgPerM2[index] = std::max(
+                baseCapacity * forestCapacityBonus,
+                0.0f);
+        }
+        if (climateState.landWaterInfiltrationFraction) {
+            climateState.landWaterInfiltrationFraction[index] = getLandWaterInfiltrationFraction(
+                tile.biome,
+                climateState.forestCoverFraction[index]);
+        }
     }
 }
 
@@ -252,6 +419,17 @@ void refreshStaticSurfaceInputs(ClimateState& climateState, const TileData* tile
 
 void SurfacePropertiesPass::initialize(ClimateState& climateState, const TileData* tiles) {
     refreshStaticSurfaceInputs(climateState, tiles);
+    if (climateState.landWaterStorageKgPerM2 && climateState.landWaterStorageCapacityKgPerM2 &&
+        climateState.forestCoverFraction) {
+        for (u32 index = 0; index < climateState.tileCount; ++index) {
+            const f32 storageCapacity = std::max(climateState.landWaterStorageCapacityKgPerM2[index], 0.0f);
+            const f32 forestMultiplier = 1.0f + climateState.forestCoverFraction[index] * 0.35f;
+            climateState.landWaterStorageKgPerM2[index] = std::clamp(
+                storageCapacity * CONFIG.moisture.landInitialSoilWaterFraction * forestMultiplier,
+                0.0f,
+                storageCapacity);
+        }
+    }
     recomputeDynamicSurfaceProperties(climateState);
 }
 
@@ -269,6 +447,9 @@ void SurfacePropertiesPass::publishToTiles(const ClimateState& climateState, Til
     if (!tiles || !climateState.snowCoverFraction || !climateState.seaIceFraction) {
         return;
     }
+
+    const f32 baseAlbedoRegulatorBias = getBaseAlbedoRegulatorBias(climateState);
+    const f32 cryosphereResponseScale = getCryosphereResponseScale(climateState);
 
     for (u32 index = 0; index < climateState.tileCount; ++index) {
         tiles[index].cryosphere = std::clamp(
