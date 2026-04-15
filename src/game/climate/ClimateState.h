@@ -110,10 +110,8 @@ public:
     f32 currentYearRegulatorTrendCPerYear = 0.0f;
     f32 currentYearRegulatorCryosphereCoolingDeltaC = 0.0f;
     f32 currentYearRegulatorControlSignalWm2 = 0.0f;
-    f32 currentYearRegulatorRowBiasMinWm2 = 0.0f;
-    f32 currentYearRegulatorRowBiasMaxWm2 = 0.0f;
-    f32 currentYearRegulatorRowBiasMeanAbsWm2 = 0.0f;
-    std::unique_ptr<f32[]> currentYearRegulatorInsolationBiasWm2ByRow;
+    bool regulatorCorrectionEnabled = false;
+    f32 regulatorTargetGlobalMeanTemperatureC = 14.0f;
     f32 completedGlobalMeanTemperatureKelvin = 0.0f;
     f32 completedGlobalMeanTemperatureDeltaKelvin = 0.0f;
     f32 completedGlobalIceFreeEquilibriumTemperatureKelvin = 0.0f;
@@ -175,14 +173,13 @@ public:
           moistureUpwindNorthIndex(std::make_unique<u32[]>(tileCount)),
           moistureEastWeight(std::make_unique<f32[]>(tileCount)),
           moistureNorthWeight(std::make_unique<f32[]>(tileCount)),
-          moistureMixingFactor(std::make_unique<f32[]>(tileCount)),
-          moistureOrographicCoolingK(std::make_unique<f32[]>(tileCount)),
-          latitudeRadians(std::make_unique<f32[]>(tileCount)),
-          relativeAltitude(std::make_unique<f32[]>(tileCount)),
-          zonalCellWidthMetersByRow(std::make_unique<f32[]>(height)),
-          inverseZonalCellWidthByRow(std::make_unique<f32[]>(height)),
-          inverseZonalDistanceSquaredByRow(std::make_unique<f32[]>(height)),
-          currentYearRegulatorInsolationBiasWm2ByRow(std::make_unique<f32[]>(height)) {}
+           moistureMixingFactor(std::make_unique<f32[]>(tileCount)),
+           moistureOrographicCoolingK(std::make_unique<f32[]>(tileCount)),
+           latitudeRadians(std::make_unique<f32[]>(tileCount)),
+           relativeAltitude(std::make_unique<f32[]>(tileCount)),
+           zonalCellWidthMetersByRow(std::make_unique<f32[]>(height)),
+           inverseZonalCellWidthByRow(std::make_unique<f32[]>(height)),
+           inverseZonalDistanceSquaredByRow(std::make_unique<f32[]>(height)) {}
 
     ClimateState(const ClimateState& other)
         : gridWidth(other.gridWidth),
@@ -240,24 +237,20 @@ public:
             currentYearGlobalCryosphereCoolingDeltaKelvin(other.currentYearGlobalCryosphereCoolingDeltaKelvin),
             currentYearGlobalMeanSurfaceAlbedo(other.currentYearGlobalMeanSurfaceAlbedo),
             currentYearGlobalCryosphereFraction(other.currentYearGlobalCryosphereFraction),
-            currentYearRegulatorTargetTemperatureC(other.currentYearRegulatorTargetTemperatureC),
-            currentYearRegulatorTemperatureErrorC(other.currentYearRegulatorTemperatureErrorC),
-            currentYearRegulatorTrendCPerYear(other.currentYearRegulatorTrendCPerYear),
-            currentYearRegulatorCryosphereCoolingDeltaC(other.currentYearRegulatorCryosphereCoolingDeltaC),
-            currentYearRegulatorControlSignalWm2(other.currentYearRegulatorControlSignalWm2),
-            currentYearRegulatorRowBiasMinWm2(other.currentYearRegulatorRowBiasMinWm2),
-            currentYearRegulatorRowBiasMaxWm2(other.currentYearRegulatorRowBiasMaxWm2),
-            currentYearRegulatorRowBiasMeanAbsWm2(other.currentYearRegulatorRowBiasMeanAbsWm2),
-            currentYearRegulatorInsolationBiasWm2ByRow(copyBuffer(
-                other.currentYearRegulatorInsolationBiasWm2ByRow,
-                other.gridHeight)),
-            completedGlobalMeanTemperatureKelvin(other.completedGlobalMeanTemperatureKelvin),
-            completedGlobalMeanTemperatureDeltaKelvin(other.completedGlobalMeanTemperatureDeltaKelvin),
-            completedGlobalIceFreeEquilibriumTemperatureKelvin(
-                other.completedGlobalIceFreeEquilibriumTemperatureKelvin),
-            completedGlobalCryosphereCoolingDeltaKelvin(other.completedGlobalCryosphereCoolingDeltaKelvin),
-            completedGlobalMeanSurfaceAlbedo(other.completedGlobalMeanSurfaceAlbedo),
-            completedGlobalCryosphereFraction(other.completedGlobalCryosphereFraction),
+             currentYearRegulatorTargetTemperatureC(other.currentYearRegulatorTargetTemperatureC),
+             currentYearRegulatorTemperatureErrorC(other.currentYearRegulatorTemperatureErrorC),
+             currentYearRegulatorTrendCPerYear(other.currentYearRegulatorTrendCPerYear),
+             currentYearRegulatorCryosphereCoolingDeltaC(other.currentYearRegulatorCryosphereCoolingDeltaC),
+             currentYearRegulatorControlSignalWm2(other.currentYearRegulatorControlSignalWm2),
+             regulatorCorrectionEnabled(other.regulatorCorrectionEnabled),
+             regulatorTargetGlobalMeanTemperatureC(other.regulatorTargetGlobalMeanTemperatureC),
+             completedGlobalMeanTemperatureKelvin(other.completedGlobalMeanTemperatureKelvin),
+             completedGlobalMeanTemperatureDeltaKelvin(other.completedGlobalMeanTemperatureDeltaKelvin),
+             completedGlobalIceFreeEquilibriumTemperatureKelvin(
+                 other.completedGlobalIceFreeEquilibriumTemperatureKelvin),
+             completedGlobalCryosphereCoolingDeltaKelvin(other.completedGlobalCryosphereCoolingDeltaKelvin),
+             completedGlobalMeanSurfaceAlbedo(other.completedGlobalMeanSurfaceAlbedo),
+             completedGlobalCryosphereFraction(other.completedGlobalCryosphereFraction),
             moistureUpwindEastIndex(allocateBuffer<u32>(other.tileCount)),
           moistureUpwindNorthIndex(allocateBuffer<u32>(other.tileCount)),
           moistureEastWeight(allocateBuffer<f32>(other.tileCount)),
@@ -339,12 +332,8 @@ public:
         currentYearRegulatorTrendCPerYear = other.currentYearRegulatorTrendCPerYear;
         currentYearRegulatorCryosphereCoolingDeltaC = other.currentYearRegulatorCryosphereCoolingDeltaC;
         currentYearRegulatorControlSignalWm2 = other.currentYearRegulatorControlSignalWm2;
-        currentYearRegulatorRowBiasMinWm2 = other.currentYearRegulatorRowBiasMinWm2;
-        currentYearRegulatorRowBiasMaxWm2 = other.currentYearRegulatorRowBiasMaxWm2;
-        currentYearRegulatorRowBiasMeanAbsWm2 = other.currentYearRegulatorRowBiasMeanAbsWm2;
-        currentYearRegulatorInsolationBiasWm2ByRow = copyBuffer(
-            other.currentYearRegulatorInsolationBiasWm2ByRow,
-            other.gridHeight);
+        regulatorCorrectionEnabled = other.regulatorCorrectionEnabled;
+        regulatorTargetGlobalMeanTemperatureC = other.regulatorTargetGlobalMeanTemperatureC;
         completedGlobalMeanTemperatureKelvin = other.completedGlobalMeanTemperatureKelvin;
         completedGlobalMeanTemperatureDeltaKelvin = other.completedGlobalMeanTemperatureDeltaKelvin;
         completedGlobalIceFreeEquilibriumTemperatureKelvin =

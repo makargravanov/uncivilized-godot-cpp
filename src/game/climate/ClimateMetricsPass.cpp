@@ -48,7 +48,13 @@ f32 calculateCurrentTurnInsolationForRow(const ClimateState& climateState, const
     }
 
     const u32 turnIndex = climateState.currentTurnIndex % climateState.annualTurnCount;
-    return climateState.insolationByTurnRow[turnIndex * climateState.gridHeight + row];
+    const f32 baseInsolation =
+        climateState.insolationByTurnRow[turnIndex * climateState.gridHeight + row];
+    if (!climateState.regulatorCorrectionEnabled) {
+        return baseInsolation;
+    }
+
+    return std::max(baseInsolation + climateState.currentYearRegulatorControlSignalWm2, 0.0f);
 }
 
 f32 calculateIceFreeEquilibriumTemperatureKelvin(

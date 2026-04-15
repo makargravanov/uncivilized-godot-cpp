@@ -46,6 +46,14 @@ f32 sampleTemperatureC(const f32* temperatureKelvin, const u32 index) {
     return temperatureKelvin[index] - CONFIG.shared.kelvinOffset;
 }
 
+f32 applyRegulatorCorrection(const ClimateState& climateState, const f32 insolationWm2) {
+    if (!climateState.regulatorCorrectionEnabled) {
+        return insolationWm2;
+    }
+
+    return std::max(insolationWm2 + climateState.currentYearRegulatorControlSignalWm2, 0.0f);
+}
+
 #if defined(DEBUG_ENABLED)
 void failIfNonFinite(const f32 value, const char* message) {
     CRASH_COND_MSG(!std::isfinite(value), message);
@@ -198,7 +206,9 @@ void initializeFromAnnualMeanEquilibrium(ClimateState& climateState) {
     }
 
     for (u32 row = 0; row < climateState.gridHeight; ++row) {
-        const f32 annualMeanInsolation = calculateAnnualMeanInsolation(climateState, row);
+        const f32 annualMeanInsolation = applyRegulatorCorrection(
+            climateState,
+            calculateAnnualMeanInsolation(climateState, row));
         const u32 rowStart = row * climateState.gridWidth;
         for (u32 column = 0; column < climateState.gridWidth; ++column) {
             const u32 index = rowStart + column;
@@ -372,7 +382,9 @@ void advanceEnergyBalanceOneTurn(ClimateState& climateState, const u32 turnIndex
 
     const f32* previousTemperatureKelvin = climateState.temperatureScratchKelvin.get();
     for (u32 row = 0; row < climateState.gridHeight; ++row) {
-        const f32 turnInsolation = climateState.insolationByTurnRow[lookupIndex(climateState, lookupTurn, row)];
+        const f32 turnInsolation = applyRegulatorCorrection(
+            climateState,
+            climateState.insolationByTurnRow[lookupIndex(climateState, lookupTurn, row)]);
         failIfNonFinite(turnInsolation,
             "Non-finite insolation row value in TemperaturePass::advanceEnergyBalanceOneTurn().");
         const u32 rowStart = row * climateState.gridWidth;

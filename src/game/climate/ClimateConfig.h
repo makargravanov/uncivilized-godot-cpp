@@ -130,7 +130,6 @@ struct ClimateRegulatorConfig {
     f32 temperatureTrendGainWm2PerCPerYear;
     f32 cryosphereFeedForwardGainWm2PerC;
     f32 maxInsolationCorrectionWm2;
-    f32 latitudeShapeExponent;
 };
 
 struct ClimateConfig {
@@ -259,10 +258,9 @@ inline constexpr ClimateMoistureConfig DEFAULT_MOISTURE_CONFIG = {
 inline constexpr ClimateRegulatorConfig DEFAULT_REGULATOR_CONFIG = {
     14.0f,
     0.55f,
-    10.0f,
+    1.0f,
     0.25f,
     35.0f,
-    1.4f,
 };
 
 inline constexpr ClimateConfig DEFAULT_CLIMATE_CONFIG = {

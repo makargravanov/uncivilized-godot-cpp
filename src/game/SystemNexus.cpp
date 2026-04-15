@@ -10,3 +10,5 @@ std::future<ClimateState> SystemNexus::pendingClimateTurn;
 bool SystemNexus::climateTurnInProgress = false;
 u32 SystemNexus::appliedClimateBiomeYears = 0;
 PlayScene* SystemNexus::play = nullptr;
+bool SystemNexus::climateRegulatorCorrectionEnabled = false;
+f32 SystemNexus::climateRegulatorTargetTemperatureC = 14.0f;

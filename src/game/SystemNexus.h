@@ -37,6 +37,7 @@ public:
 
         climateState = std::make_unique<ClimateState>(
             TemperaturePass::createInitialState(mapResult.mapResult));
+        applyClimateRegulatorSettings(*climateState);
         SurfacePropertiesPass::initialize(*climateState, tiles.get());
         TemperaturePass::initializeCurrentTurn(*climateState);
         WindPass::initialize(*climateState);
@@ -58,6 +59,29 @@ public:
 
     static ClimateState* getClimateState() {
         return climateState.get();
+    }
+
+    static void setClimateRegulatorCorrectionEnabled(const bool enabled) {
+        climateRegulatorCorrectionEnabled = enabled;
+        if (climateState) {
+            climateState->regulatorCorrectionEnabled = enabled;
+        }
+    }
+
+    static bool isClimateRegulatorCorrectionEnabled() {
+        return climateRegulatorCorrectionEnabled;
+    }
+
+    static void setClimateRegulatorTargetTemperatureC(const f32 temperatureC) {
+        climateRegulatorTargetTemperatureC = temperatureC;
+        if (climateState) {
+            climateState->regulatorTargetGlobalMeanTemperatureC = temperatureC;
+            climateState->currentYearRegulatorTargetTemperatureC = temperatureC;
+        }
+    }
+
+    static f32 climateRegulatorTargetTemperatureCValue() {
+        return climateRegulatorTargetTemperatureC;
     }
 
     static void advanceClimateTurn() {
@@ -108,6 +132,8 @@ public:
         } else {
             climateState = std::make_unique<ClimateState>(std::move(completedClimateState));
         }
+
+        applyClimateRegulatorSettings(*climateState);
 
         if (mapManager) {
             const bool biomeSnapshotUpdated = updateBiomeSnapshotIfNeeded();
@@ -182,6 +208,14 @@ private:
     static bool climateTurnInProgress;
     static u32 appliedClimateBiomeYears;
     static PlayScene* play;
+    static bool climateRegulatorCorrectionEnabled;
+    static f32 climateRegulatorTargetTemperatureC;
+
+    static void applyClimateRegulatorSettings(ClimateState& state) {
+        state.regulatorCorrectionEnabled = climateRegulatorCorrectionEnabled;
+        state.regulatorTargetGlobalMeanTemperatureC = climateRegulatorTargetTemperatureC;
+        state.currentYearRegulatorTargetTemperatureC = climateRegulatorTargetTemperatureC;
+    }
 };
 
 #endif //SYSTEMNEXUS_H

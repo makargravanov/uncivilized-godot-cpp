@@ -41,6 +41,10 @@ public:
     // Returns tile info at world (x, z) or empty dict if out of bounds.
     godot::Dictionary get_tile_info_at(float worldX, float worldZ);
     godot::Dictionary get_climate_summary() const;
+    void set_climate_regulator_correction_enabled(bool enabled);
+    bool is_climate_regulator_correction_enabled() const;
+    void set_climate_regulator_target_temperature_c(float temperatureC);
+    float get_climate_regulator_target_temperature_c() const;
 
     // Start computing the next climate turn in the background if no turn is pending.
     void advance_climate_turn();

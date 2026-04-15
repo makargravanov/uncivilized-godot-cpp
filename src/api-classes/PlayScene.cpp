@@ -67,6 +67,18 @@ void PlayScene::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_view_mode", "mode"), &PlayScene::set_view_mode);
     godot::ClassDB::bind_method(godot::D_METHOD("get_tile_info_at", "worldX", "worldZ"), &PlayScene::get_tile_info_at);
     godot::ClassDB::bind_method(godot::D_METHOD("get_climate_summary"), &PlayScene::get_climate_summary);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_correction_enabled", "enabled"),
+        &PlayScene::set_climate_regulator_correction_enabled);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("is_climate_regulator_correction_enabled"),
+        &PlayScene::is_climate_regulator_correction_enabled);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("set_climate_regulator_target_temperature_c", "temperature_c"),
+        &PlayScene::set_climate_regulator_target_temperature_c);
+    godot::ClassDB::bind_method(
+        godot::D_METHOD("get_climate_regulator_target_temperature_c"),
+        &PlayScene::get_climate_regulator_target_temperature_c);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_climate_turn"), &PlayScene::advance_climate_turn);
     godot::ClassDB::bind_method(godot::D_METHOD("is_climate_turn_in_progress"), &PlayScene::is_climate_turn_in_progress);
     godot::ClassDB::bind_method(godot::D_METHOD("get_current_turn"), &PlayScene::get_current_turn);
@@ -183,6 +195,7 @@ godot::Dictionary PlayScene::get_climate_summary() const {
 
     result["climate_years_completed"] = static_cast<int>(climateState->completedClimateYears);
     result["target_global_mean_temperature_c"] = climateState->currentYearRegulatorTargetTemperatureC;
+    result["regulator_correction_enabled"] = climateState->regulatorCorrectionEnabled;
     result["current_year_mean_temperature_k"] = climateState->currentYearGlobalMeanTemperatureKelvin;
     result["current_year_mean_temperature_c"] =
         climateState->currentYearGlobalMeanTemperatureKelvin - KELVIN_OFFSET;
@@ -198,9 +211,6 @@ godot::Dictionary PlayScene::get_climate_summary() const {
     result["regulator_trend_c_per_year"] = climateState->currentYearRegulatorTrendCPerYear;
     result["regulator_cryosphere_cooling_delta_c"] = climateState->currentYearRegulatorCryosphereCoolingDeltaC;
     result["regulator_control_signal_wm2"] = climateState->currentYearRegulatorControlSignalWm2;
-    result["regulator_row_bias_min_wm2"] = climateState->currentYearRegulatorRowBiasMinWm2;
-    result["regulator_row_bias_max_wm2"] = climateState->currentYearRegulatorRowBiasMaxWm2;
-    result["regulator_row_bias_mean_abs_wm2"] = climateState->currentYearRegulatorRowBiasMeanAbsWm2;
     result["completed_year_mean_temperature_k"] = climateState->completedGlobalMeanTemperatureKelvin;
     result["completed_year_mean_temperature_c"] =
         climateState->completedGlobalMeanTemperatureKelvin - KELVIN_OFFSET;
@@ -214,6 +224,22 @@ godot::Dictionary PlayScene::get_climate_summary() const {
     result["completed_year_mean_surface_albedo"] = climateState->completedGlobalMeanSurfaceAlbedo;
     result["completed_year_mean_cryosphere_fraction"] = climateState->completedGlobalCryosphereFraction;
     return result;
+}
+
+void PlayScene::set_climate_regulator_correction_enabled(const bool enabled) {
+    SystemNexus::setClimateRegulatorCorrectionEnabled(enabled);
+}
+
+bool PlayScene::is_climate_regulator_correction_enabled() const {
+    return SystemNexus::isClimateRegulatorCorrectionEnabled();
+}
+
+void PlayScene::set_climate_regulator_target_temperature_c(const float temperatureC) {
+    SystemNexus::setClimateRegulatorTargetTemperatureC(temperatureC);
+}
+
+float PlayScene::get_climate_regulator_target_temperature_c() const {
+    return SystemNexus::climateRegulatorTargetTemperatureCValue();
 }
 
 godot::Dictionary PlayScene::get_tile_info_at(const float worldX, const float worldZ) {
